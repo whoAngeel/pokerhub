@@ -1,0 +1,57 @@
+# Configuración "nube": todos los agentes por API, no necesita GPU.
+# (La configuración local con gemma en Ollama es configs/config.yaml.)
+#
+# Claves en .env (pokerd lo lee al arrancar; .env está en .gitignore):
+#   OPENROUTER_API_KEY=sk-or-...   https://openrouter.ai/keys
+#   GOOGLE_API_KEY=...             (opcional) https://aistudio.google.com/apikey
+#
+# Uso:
+#   go run ./cmd/pokerd sim   --config configs/api.yaml --hands 3
+#   go run ./cmd/pokerd serve --config configs/api.yaml
+#
+# Cambiar el modelo de un personaje = cambiar `model` en su asiento.
+# Coste orientativo con estos modelos: ~0.001 $ por mano.
+
+server:
+  addr: "127.0.0.1:8080"
+  debug: false
+
+providers:
+  openrouter:
+    type: openai
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    structured: json_schema
+    extra:
+      reasoning:                    # desactiva el razonamiento oculto del modelo;
+        enabled: false              # el nuestro va en el campo JSON "reasoning"
+    headers:
+      X-Title: pokerhub
+  # Google AI Studio (endpoint compatible con OpenAI). Probado el 2026-10-31 con
+  # Gemma 4 26B: NO recomendado para Gemma, porque piensa siempre (<thought> dentro del
+  # contenido, ~10 s, agota max_tokens sin JSON) y no deja apagarlo
+  # ("Thinking budget is not supported for this model"). Sirve para modelos Gemini.
+  # google:
+  #   type: openai
+  #   base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  #   api_key_env: GOOGLE_API_KEY
+  #   structured: json_schema       # Gemini sí soporta json_schema
+  #   extra: { reasoning_effort: none }
+
+table:
+  small_blind: 5
+  big_blind: 10
+  buy_in: 1000
+  rebuy: auto
+  seed: 0
+  action_delay_ms: 600
+  decision_timeout_ms: 15000        # más margen que en local: hay red de por medio
+  equity_iters: 2000
+  memory_notes: true
+
+seats:
+  - { type: rulebot, name: "Calculín" }
+  - { type: llm, persona: personas/toro.yaml,     provider: openrouter, model: "google/gemma-4-26b-a4b-it" }
+  - { type: llm, persona: personas/abuela.yaml,   provider: openrouter, model: "anthropic/claude-haiku-5.5" }
+  - { type: llm, persona: personas/profesor.yaml, provider: openrouter, model: "deepseek/deepseek-v4.1-flash" }
+  - { type: llm, persona: personas/payaso.yaml,   provider: openrouter, model: "meta-llama/llama-4-scout" }

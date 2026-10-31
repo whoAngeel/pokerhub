@@ -131,10 +131,11 @@ seats:
 ```
 
 - **Otro modelo u otro servidor:** cualquier endpoint compatible con OpenAI (vLLM, llama.cpp `server`, LM Studio, OpenRouter, Groq…) se añade como provider con `type: openai` y su `base_url`. Cada asiento puede usar un provider y un modelo distintos. Si el servidor no soporta `json_schema`, usa `structured: json_object` o `structured: prompt`.
-- **Un modelo distinto por personaje (OpenRouter):** `configs/openrouter.yaml` es un preset listo: El Toro con Llama 3.3 70B, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con gemma local.
+- **Dos configuraciones:** `configs/config.yaml` (todo local con gemma en Ollama, sin claves) y `configs/api.yaml` (todo en la nube, sin GPU, un modelo distinto por personaje: El Toro con Gemma 4 26B en Google AI Studio, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con Llama 4 Scout, los tres por OpenRouter).
   ```bash
   echo 'OPENROUTER_API_KEY=sk-or-...' >> .env   # pokerd lee .env al arrancar; .env está en .gitignore
-  go run ./cmd/pokerd sim --config configs/openrouter.yaml --hands 3
+  echo 'GOOGLE_API_KEY=...' >> .env             # https://aistudio.google.com/apikey
+  go run ./cmd/pokerd sim --config configs/api.yaml --hands 3
   ```
   Para cambiar el modelo de un personaje, edita el `model` de su asiento (catálogo: https://openrouter.ai/models, con soporte de "structured outputs").
 - **Claves de API:** solo por variable de entorno o en `.env` (nunca se commitea), con `api_key_env: OPENROUTER_API_KEY`. Nunca en el YAML.
