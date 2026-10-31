@@ -20,8 +20,10 @@ import (
 // speed<=0 means real time (1x); loop restarts the file from the top once
 // it ends, instead of stopping. control{pause|resume|step|speed} from a
 // spectator connection works against the replay (Player satisfies
-// server.Controller and server.SpeedController).
-func Serve(ctx context.Context, cfg *config.Config, file string, speed float64, loop bool) error {
+// server.Controller and server.SpeedController). token, when non-empty,
+// gates /ws and /api/config exactly like a live `pokerd serve` (see
+// server.NewApp); empty keeps the previous no-auth behavior.
+func Serve(ctx context.Context, cfg *config.Config, file string, speed float64, loop bool, token string) error {
 	pub, err := server.BuildPublicConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("replay: serve: %w", err)
@@ -34,7 +36,7 @@ func Serve(ctx context.Context, cfg *config.Config, file string, speed float64, 
 
 	httpErrCh := make(chan error, 1)
 	go func() {
-		httpErrCh <- server.Run(runCtx, cfg.Server.Addr, hub, player, pub, cfg.Server.Debug)
+		httpErrCh <- server.Run(runCtx, cfg.Server.Addr, hub, player, pub, cfg.Server.Debug, token)
 		cancel()
 	}()
 

@@ -95,7 +95,7 @@ func readUntil(t *testing.T, c *websocket.Conn, all *[]protocol.Envelope, pred f
 
 func TestE2E_SpectatorAndPlayerVisibility(t *testing.T) {
 	sess, hub, pub := buildE2ESession(t)
-	app := NewApp(hub, sess, pub, false)
+	app := NewApp(hub, sess, pub, false, "")
 	srv := httptest.NewServer(app)
 	defer srv.Close()
 

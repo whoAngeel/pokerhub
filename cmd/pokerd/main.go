@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/whoAngeel/pokerhub/internal/config"
@@ -18,20 +19,24 @@ import (
 )
 
 func main() {
-	loadDotEnv(".env")
-	if len(os.Args) < 2 {
+	args, envFile := splitEnvFileFlag(os.Args[1:])
+	loadDotEnv(envFile) // never overrides a var already set (e.g. real env beats .env)
+
+	if len(args) < 1 {
 		usage()
 		os.Exit(1)
 	}
 
 	var err error
-	switch os.Args[1] {
+	switch args[0] {
 	case "sim":
-		err = runSim(os.Args[2:])
+		err = runSim(args[1:])
 	case "serve":
-		err = runServe(os.Args[2:])
+		err = runServe(args[1:])
 	case "replay":
-		err = runReplay(os.Args[2:])
+		err = runReplay(args[1:])
+	case "tui":
+		err = runTui(args[1:])
 	default:
 		usage()
 		os.Exit(1)
@@ -43,11 +48,47 @@ func main() {
 	}
 }
 
+// splitEnvFileFlag pulls a leading global "--env-file <path>" or
+// "--env-file=<path>" off args (it comes before the subcommand, e.g.
+// `pokerd --env-file ~/pokerhub.env tui --url ...`) and returns the
+// remaining args plus the env file path to load (".env" if not given).
+// This has to happen before any subcommand's own flag.Parse, and before
+// loadDotEnv, since --token flags below resolve from the environment it
+// populates.
+func splitEnvFileFlag(args []string) ([]string, string) {
+	if len(args) == 0 {
+		return args, ".env"
+	}
+	if args[0] == "--env-file" && len(args) >= 2 {
+		return args[2:], args[1]
+	}
+	if v, ok := strings.CutPrefix(args[0], "--env-file="); ok {
+		return args[1:], v
+	}
+	return args, ".env"
+}
+
+// resolveToken returns the auth token to use: flagVal (from a subcommand's
+// own --token) if set, else POKERHUB_TOKEN from the environment (populated
+// by loadDotEnv from --env-file/.env, or already set in the real
+// environment). Never logged -- callers must not fmt.Print this value.
+func resolveToken(flagVal string) string {
+	if flagVal != "" {
+		return flagVal
+	}
+	return os.Getenv("POKERHUB_TOKEN")
+}
+
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
-  pokerd sim    [--config f] [--hands N] [--seed N] [--fast] [--mock] [--record f.jsonl]
-  pokerd serve  [--config f] [--addr host:port] [--seed N] [--fast] [--mock] [--record f.jsonl]
-  pokerd replay [--config f] [--addr host:port] [--speed X] [--loop] <file.jsonl>`)
+  pokerd [--env-file path]  sim    [--config f] [--hands N] [--seed N] [--fast] [--mock] [--record f.jsonl]
+  pokerd [--env-file path]  serve  [--config f] [--addr host:port] [--seed N] [--fast] [--mock] [--record f.jsonl] [--token T]
+  pokerd [--env-file path]  replay [--config f] [--addr host:port] [--speed X] [--loop] [--token T] <file.jsonl>
+  pokerd [--env-file path]  tui    [--url ws|wss|http(s)://host:port] [--token T] [--ascii]
+
+--env-file defaults to ".env" in the current directory. --token defaults to
+the POKERHUB_TOKEN environment variable (loaded from --env-file) when not
+given explicitly.`)
 }
 
 // sessionFlags are shared by sim and serve.
@@ -152,6 +193,7 @@ func runServe(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	f := addSessionFlags(fs)
 	addr := fs.String("addr", "", "listen address (default: server.addr from config)")
+	token := fs.String("token", "", "required ?token= for /ws and /api/config (default: POKERHUB_TOKEN env/.env)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -180,8 +222,9 @@ func runServe(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	fmt.Fprintf(os.Stderr, "pokerd: serving on http://%s  (ws: /ws?role=spectator | /ws?role=player&seat=N)\n", cfg.Server.Addr)
-	return server.Serve(ctx, cfg, sess, hub)
+	tok := resolveToken(*token)
+	fmt.Fprintf(os.Stderr, "pokerd: serving on http://%s  (ws: /ws?role=spectator | /ws?role=player&seat=N; token required: %v)\n", cfg.Server.Addr, tok != "")
+	return server.Serve(ctx, cfg, sess, hub, tok)
 }
 
 func runReplay(args []string) error {
@@ -190,6 +233,7 @@ func runReplay(args []string) error {
 	addr := fs.String("addr", "", "listen address (default: server.addr from config)")
 	speed := fs.Float64("speed", 1, "playback speed multiplier")
 	loop := fs.Bool("loop", false, "restart the recording when it ends")
+	token := fs.String("token", "", "required ?token= for /ws and /api/config (default: POKERHUB_TOKEN env/.env)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -208,6 +252,7 @@ func runReplay(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	fmt.Fprintf(os.Stderr, "pokerd: replaying %s on http://%s (speed %.1fx)\n", fs.Arg(0), cfg.Server.Addr, *speed)
-	return replay.Serve(ctx, cfg, fs.Arg(0), *speed, *loop)
+	tok := resolveToken(*token)
+	fmt.Fprintf(os.Stderr, "pokerd: replaying %s on http://%s (speed %.1fx; token required: %v)\n", fs.Arg(0), cfg.Server.Addr, *speed, tok != "")
+	return replay.Serve(ctx, cfg, fs.Arg(0), *speed, *loop, tok)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"strconv"
 
@@ -11,8 +12,13 @@ import (
 
 // NewApp builds the Echo app: GET /healthz, GET /api/config, GET /ws
 // (PROTOCOL.md §1). debug mirrors configs/config.yaml's server.debug
-// (allows a spectator connection even with a human seated).
-func NewApp(hub *Hub, ctrl Controller, pub PublicConfig, debug bool) *echo.Echo {
+// (allows a spectator connection even with a human seated). token, when
+// non-empty, is required as the ?token= query param on /ws and /api/config
+// (constant-time compare); /healthz always stays open. An empty token
+// preserves the previous (no-auth) behavior -- needed so a quick Cloudflare
+// tunnel (docs/DEPLOY.md "Túnel de Cloudflare") isn't wide open to anyone
+// with the URL.
+func NewApp(hub *Hub, ctrl Controller, pub PublicConfig, debug bool, token string) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -24,12 +30,29 @@ func NewApp(hub *Hub, ctrl Controller, pub PublicConfig, debug bool) *echo.Echo 
 		return c.String(http.StatusOK, "OK")
 	})
 	e.GET("/api/config", func(c echo.Context) error {
+		if !checkToken(c, token) {
+			return c.String(http.StatusUnauthorized, "unauthorized")
+		}
 		return c.JSON(http.StatusOK, pub)
 	})
 	e.GET("/ws", func(c echo.Context) error {
+		if !checkToken(c, token) {
+			return c.String(http.StatusUnauthorized, "unauthorized")
+		}
 		return handleWS(c, hub, ctrl, pub, debug)
 	})
 	return e
+}
+
+// checkToken reports whether the request may proceed: always true when no
+// token is configured (previous no-auth behavior), otherwise a
+// constant-time comparison against ?token=. Never logs the token.
+func checkToken(c echo.Context, token string) bool {
+	if token == "" {
+		return true
+	}
+	got := c.QueryParam("token")
+	return subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
 }
 
 // handleWS accepts the WebSocket upgrade, applies the spectator-with-a-

@@ -80,11 +80,50 @@ func NewTableState(seats []Seat) *TableState {
 // Apply folds one god-view Envelope into the running state. Unknown types
 // are ignored (PROTOCOL.md §8: a client, and by extension this reducer,
 // must be able to ignore a type it doesn't recognize without breaking).
+//
+// TypeSnapshot is handled too, even though Hub never routes one through
+// Apply itself (it builds/sends a snapshot straight from TableState.Snapshot
+// on connect, bypassing Apply entirely -- see server/hub.go's publish vs.
+// Connect/Replay). A standalone consumer that only sees the wire stream
+// (e.g. internal/tui, or any other external client) has no such shortcut:
+// the first Envelope it ever receives per PROTOCOL.md §2 IS a snapshot, so
+// Apply needs to be able to seed/resync a fresh TableState directly from
+// one, including after a reconnect mid-hand.
 func (ts *TableState) Apply(env Envelope) error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
 	switch env.Type {
+	case TypeSnapshot:
+		var p SnapshotPayload
+		if err := env.Decode(&p); err != nil {
+			return err
+		}
+		if p.HandID != nil {
+			ts.handID = *p.HandID
+		} else {
+			ts.handID = 0
+		}
+		ts.street = p.Street
+		ts.button = p.Button
+		ts.smallBlind = p.SmallBlind
+		ts.bigBlind = p.BigBlind
+		ts.board = p.Board
+		ts.pot = p.Pot
+		ts.toAct = p.ToAct
+		ts.toCall = 0 // not carried by SnapshotPayload; the next "turn" event fills it in
+		ts.legal = p.LegalActions
+		ts.seats = make([]int, len(p.Seats))
+		ts.state = make(map[int]*seatState, len(p.Seats))
+		for i, s := range p.Seats {
+			ts.seats[i] = s.Seat
+			ts.state[s.Seat] = &seatState{
+				name: s.Name, personaID: s.PersonaID, kind: s.Kind, model: s.Model,
+				stack: s.Stack, status: s.Status, betThisStreet: s.BetThisStreet, hole: s.Hole,
+			}
+		}
+		sort.Ints(ts.seats)
+
 	case TypeHandStart:
 		var p HandStartPayload
 		if err := env.Decode(&p); err != nil {

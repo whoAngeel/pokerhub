@@ -17,8 +17,8 @@ import (
 // h must already be the Sink (or part of a table.MultiSink) that whatever
 // table.Session is live was constructed with: Run only serves the HTTP/WS
 // side, it never touches the game loop. See Serve for the usual pairing.
-func Run(ctx context.Context, addr string, h *Hub, ctrl Controller, pub PublicConfig, debug bool) error {
-	app := NewApp(h, ctrl, pub, debug)
+func Run(ctx context.Context, addr string, h *Hub, ctrl Controller, pub PublicConfig, debug bool, token string) error {
+	app := NewApp(h, ctrl, pub, debug, token)
 	srv := &http.Server{Addr: addr, Handler: app}
 
 	errCh := make(chan error, 1)
@@ -66,14 +66,14 @@ func Run(ctx context.Context, addr string, h *Hub, ctrl Controller, pub PublicCo
 //	players, memAgents, err := config.Build(cfg)
 //	sess, err := table.NewSession(tableCfg, players, sink)
 //	sess.SetMemoryAgents(memAgents)
-//	err = server.Serve(ctx, cfg, sess, hub)
+//	err = server.Serve(ctx, cfg, sess, hub, token)
 //	if rec != nil { rec.Close() }
 //
 // (The ideal fix, noted in this task's report for whoever next touches
 // internal/table, is a Session.AddSink(Sink) or an equivalent constructor
 // option, so Serve could own building the Hub+Recorder end to end exactly
 // as first specified.)
-func Serve(ctx context.Context, cfg *config.Config, sess *table.Session, h *Hub) error {
+func Serve(ctx context.Context, cfg *config.Config, sess *table.Session, h *Hub, token string) error {
 	pub, err := BuildPublicConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("server: serve: %w", err)
@@ -84,7 +84,7 @@ func Serve(ctx context.Context, cfg *config.Config, sess *table.Session, h *Hub)
 
 	httpErrCh := make(chan error, 1)
 	go func() {
-		httpErrCh <- Run(runCtx, cfg.Server.Addr, h, sess, pub, cfg.Server.Debug)
+		httpErrCh <- Run(runCtx, cfg.Server.Addr, h, sess, pub, cfg.Server.Debug, token)
 		cancel() // the HTTP server stopping (even cleanly) also winds the session down
 	}()
 
