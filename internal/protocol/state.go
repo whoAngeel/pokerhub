@@ -140,6 +140,15 @@ func (ts *TableState) Apply(env Envelope) error {
 		ts.legal = nil
 		for _, s := range p.Seats {
 			st := ts.seatFor(s.Seat)
+			if s.Name != "" {
+				// hand_start is the one place besides "snapshot" that
+				// carries seat names (PROTOCOL.md §4); without this, a
+				// TableState seeded only from hand_start (e.g. a bare
+				// recording, or a reconnect that missed the seeding
+				// snapshot) would render every log line as "seat N" forever
+				// instead of the player's actual name.
+				st.name = s.Name
+			}
 			st.stack = s.Stack
 			st.status = "active"
 			st.betThisStreet = 0

@@ -49,7 +49,37 @@ var (
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(colorBorder).
 			Padding(0, 1)
+
+	panelBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder()).
+			BorderForeground(colorBorder).
+			Padding(0, 1)
+
+	seatBoxWinnerStyle = seatBoxStyle.BorderForeground(colorGood).Bold(true)
 )
+
+// truncate shortens s to at most width columns (lipgloss.Width-measured),
+// appending "…" when it had to cut -- used for single-line, non-scrolling
+// surfaces (header, tab bar, footer) where wrapping isn't an option
+// (docs/TUI_PLAN.md T2: "never let text overflow its box (truncate with
+// '…')"). Multi-line scrollable surfaces (chat/reasoning/memoria) wrap
+// instead, see wrapToWidth in view_side.go.
+func truncate(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width == 1 {
+		return "…"
+	}
+	out := []rune(s)
+	for len(out) > 0 && lipgloss.Width(string(out)+"…") > width {
+		out = out[:len(out)-1]
+	}
+	return string(out) + "…"
+}
 
 // suitStyle returns the colored style for a card's suit byte: red for
 // hearts/diamonds, white for spades/clubs (PROTOCOL.md §3 Card format:

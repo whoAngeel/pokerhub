@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
@@ -46,7 +47,7 @@ func (m Model) renderView() tea.View {
 	}
 
 	header := m.renderHeader(snap, haveSnap)
-	footer := footerStyle.Render("q salir · esperando controles (pausa/paso/velocidad) en T2")
+	footer := m.renderFooter()
 
 	if !haveSnap {
 		body := dimStyle.Render("esperando snapshot inicial del servidor…")
@@ -54,19 +55,57 @@ func (m Model) renderView() tea.View {
 		return tea.NewView(content)
 	}
 
+	panelBoxW, panelContentW, panelH, showPanel := m.sidePanelGeometry()
+	wide := m.width >= wideThreshold
+
+	tableModel := m
+	if showPanel && wide {
+		tableModel.width = m.width - panelBoxW - 2
+	}
 	var table string
-	if m.width < compactWidth || m.height < compactHeight {
-		table = m.renderCompact(snap)
+	if tableModel.width < compactWidth || tableModel.height < compactHeight {
+		table = tableModel.renderCompact(snap)
 	} else {
-		table = m.renderTable(snap)
+		table = tableModel.renderTable(snap)
 	}
 
-	logLines := m.height - lipgloss.Height(table) - lipgloss.Height(header) - 3
+	body := table
+	if showPanel {
+		panel := m.renderSidePanel(panelBoxW, panelH)
+		_ = panelContentW
+		if wide {
+			body = lipgloss.JoinHorizontal(lipgloss.Top, table, "  ", panel)
+		} else {
+			body = lipgloss.JoinVertical(lipgloss.Left, table, panel)
+		}
+	}
+
+	logLines := m.height - lipgloss.Height(body) - lipgloss.Height(header) - lipgloss.Height(footer) - 1
 	if logLines < 3 {
 		logLines = 3
 	}
-	content := lipgloss.JoinVertical(lipgloss.Left, header, table, m.renderLog(logLines), footer)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, body, m.renderLog(logLines), footer)
 	return tea.NewView(content)
+}
+
+// renderFooter draws the bottom-most line(s): a ~3s "error" flash after a
+// failed control message (docs/TUI_PLAN.md T2: "Handle the server's error
+// reply by flashing it in the footer") replacing the bubbles/help short or
+// full keymap view ("?" toggles which) while it's live.
+func (m Model) renderFooter() string {
+	if time.Now().Before(m.footerErrUntil) && m.footerErrMsg != "" {
+		return errStyle.Render(truncate("⚠ "+m.footerErrMsg, m.width))
+	}
+	return m.help.View(m.keys)
+}
+
+// pacingBadge renders the header's pause/speed indicator (docs/TUI_PLAN.md
+// T2: 'Show state in the header ("⏸ pausado", "x2")').
+func (m Model) pacingBadge() string {
+	if m.paused {
+		return errStyle.Render(fmt.Sprintf("⏸ pausado · x%g", m.speed))
+	}
+	return goodStyle.Render(fmt.Sprintf("▶ x%g", m.speed))
 }
 
 // renderLog draws the bottom log box with the last n lines (or fewer).
@@ -99,7 +138,7 @@ func (m Model) renderHeader(snap protocol.SnapshotPayload, haveSnap bool) string
 		handNo = *snap.HandID
 	}
 	title := fmt.Sprintf("Mano #%d · %s · Ciegas %d/%d · bote %d", handNo, orDash(snap.Street), snap.SmallBlind, snap.BigBlind, snap.Pot)
-	return headerStyle.Render(title) + "  " + status
+	return truncate(headerStyle.Render(title)+"  "+status+"  "+m.pacingBadge(), m.width)
 }
 
 func orDash(s string) string {
@@ -199,6 +238,9 @@ func (m Model) renderSeatBox(s protocol.SnapshotSeat, snap protocol.SnapshotPayl
 	if m.thinking != nil && *m.thinking == s.Seat {
 		statusLine = m.spin.View() + " pensando…"
 	}
+	if amt, ok := m.winnerSeats[s.Seat]; ok && time.Now().Before(m.winnerUntil) {
+		statusLine = goodStyle.Render(fmt.Sprintf("gana %d", amt))
+	}
 
 	cardsLine := renderCards(s.Hole, m.ascii)
 
@@ -224,9 +266,16 @@ func statusLineFor(s protocol.SnapshotSeat) string {
 	}
 }
 
-// styleBySeatStatus picks the box border style: highlighted when it's this
-// seat's turn, dimmed when folded/sitting out, plain otherwise.
+// styleBySeatStatus picks the box border style: green for ~3s after this
+// seat won a pot (docs/TUI_PLAN.md T2 "Highlight winner"), highlighted
+// when it's this seat's turn, dimmed when folded/sitting out, plain
+// otherwise. Winner takes priority over to-act -- the two can't actually
+// overlap (nobody is "to act" once the pot's been awarded) but a tie-break
+// still has to pick one.
 func (m Model) styleBySeatStatus(s protocol.SnapshotSeat, snap protocol.SnapshotPayload) lipgloss.Style {
+	if _, ok := m.winnerSeats[s.Seat]; ok && time.Now().Before(m.winnerUntil) {
+		return seatBoxWinnerStyle
+	}
 	switch {
 	case s.Seat == snap.ToAct:
 		return seatBoxActiveStyle

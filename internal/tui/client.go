@@ -14,9 +14,12 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -36,6 +39,15 @@ type ConnStateMsg struct {
 	State string // "connecting" | "connected" | "disconnected"
 	Err   error
 }
+
+// SetClientMsg hands the live *Client to the Model so key presses (T2:
+// pause/resume/step/speed) can send a "control" message back over the same
+// WebSocket connection Client.Run is driving. It travels as an ordinary
+// tea.Msg (via program.Send right after NewClient, before client.Run
+// starts) rather than a constructor field, because the Model has to exist
+// before tea.NewProgram(model) can hand out the *tea.Program a Client
+// needs -- see cmd/pokerd/tui.go.
+type SetClientMsg struct{ Client *Client }
 
 // NormalizeURL turns whatever base the user passed (ws://, wss://,
 // http(s)://, or a bare "host:port") into the full spectator WebSocket
@@ -82,6 +94,15 @@ type Client struct {
 	url     string
 	program *tea.Program
 	lastSeq int64
+
+	// mu guards conn/connCtx, set for the lifetime of one live connection by
+	// connectOnce and cleared on disconnect, so SendControl (called from the
+	// Bubble Tea Update goroutine on a keypress) never races with
+	// connectOnce/Run (the connection goroutine) over which connection is
+	// "current".
+	mu      sync.Mutex
+	conn    *websocket.Conn
+	connCtx context.Context
 }
 
 // NewClient builds a Client for endpoint url (already normalized), sending
@@ -138,6 +159,15 @@ func (c *Client) connectOnce(ctx context.Context) error {
 
 	c.program.Send(ConnStateMsg{State: "connected"})
 
+	c.mu.Lock()
+	c.conn, c.connCtx = conn, ctx
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		c.conn, c.connCtx = nil, nil
+		c.mu.Unlock()
+	}()
+
 	for {
 		var env protocol.Envelope
 		if err := wsjson.Read(ctx, conn, &env); err != nil {
@@ -148,4 +178,115 @@ func (c *Client) connectOnce(ctx context.Context) error {
 		}
 		c.program.Send(EnvMsg{Env: env})
 	}
+}
+
+// SendControl writes a "control" message (PROTOCOL.md §5: only a spectator
+// may send one) over whichever connection is currently live, for the
+// pause/resume/step/speed keys (docs/TUI_PLAN.md T2). Returns an error --
+// surfaced by the Model as a footer flash -- when there's no live
+// connection to write to right now; the caller is expected to retry on the
+// next keypress once reconnected rather than queue anything.
+func (c *Client) SendControl(cmd string, value *float64) error {
+	c.mu.Lock()
+	conn, ctx := c.conn, c.connCtx
+	c.mu.Unlock()
+	if conn == nil {
+		return fmt.Errorf("tui: not connected")
+	}
+	env, err := protocol.NewEnvelope(protocol.TypeControl, nil, protocol.ControlPayload{Cmd: cmd, Value: value})
+	if err != nil {
+		return err
+	}
+	return wsjson.Write(ctx, conn, env)
+}
+
+// httpConfigURL mirrors NormalizeURL but targets the plain HTTP
+// "/api/config" endpoint (PROTOCOL.md §1) instead of the WebSocket "/ws"
+// one: ws/wss map to http/https, same host, same ?token=.
+func httpConfigURL(base, token string) (string, error) {
+	if base == "" {
+		return "", fmt.Errorf("tui: empty url")
+	}
+	if !strings.Contains(base, "://") {
+		base = "http://" + base
+	}
+	u, err := url.Parse(base)
+	if err != nil {
+		return "", fmt.Errorf("tui: bad url %q: %w", base, err)
+	}
+	switch u.Scheme {
+	case "ws":
+		u.Scheme = "http"
+	case "wss":
+		u.Scheme = "https"
+	case "http", "https":
+		// already fine
+	default:
+		return "", fmt.Errorf("tui: unsupported scheme %q (want ws/wss/http/https)", u.Scheme)
+	}
+	u.Path = "/api/config"
+	if token != "" {
+		q := url.Values{}
+		q.Set("token", token)
+		u.RawQuery = q.Encode()
+	} else {
+		u.RawQuery = ""
+	}
+	return u.String(), nil
+}
+
+// configSeat/configResp decode GET /api/config's body (server.PublicConfig,
+// internal/server/config.go) without internal/tui importing internal/server
+// -- this package only needs the handful of fields NewTableState wants to
+// seed, not the HTTP app itself.
+type configSeat struct {
+	Seat      int     `json:"seat"`
+	Name      string  `json:"name"`
+	PersonaID *string `json:"persona_id"`
+	Kind      string  `json:"kind"`
+	Model     *string `json:"model"`
+}
+
+type configResp struct {
+	BuyIn int          `json:"buy_in"`
+	Seats []configSeat `json:"seats"`
+}
+
+// FetchConfig performs one synchronous GET against base's "/api/config"
+// (PROTOCOL.md §1) and renders the result as the []protocol.Seat
+// NewTableState wants, so `pokerd tui` can show real names/personas/models
+// from the moment it starts instead of "seat N" placeholders for the few
+// seconds before the first "snapshot"/"hand_start" arrives over the
+// WebSocket (docs/TUI_PLAN.md T2 "Names everywhere"). Best-effort by
+// design: callers should treat any error as "no seed data yet, the wire
+// stream will fill names in on its own" rather than fatal.
+func FetchConfig(ctx context.Context, base, token string) ([]protocol.Seat, error) {
+	endpoint, err := httpConfigURL(base, token)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("tui: GET /api/config: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tui: GET /api/config: status %d", resp.StatusCode)
+	}
+	var cfg configResp
+	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("tui: decode /api/config: %w", err)
+	}
+	seats := make([]protocol.Seat, len(cfg.Seats))
+	for i, s := range cfg.Seats {
+		seats[i] = protocol.Seat{
+			Seat: s.Seat, Name: s.Name, PersonaID: s.PersonaID, Kind: s.Kind,
+			Stack: cfg.BuyIn, Status: "active", Model: s.Model,
+		}
+	}
+	return seats, nil
 }

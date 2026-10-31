@@ -25,7 +25,7 @@ func TestModel_ReplaySample(t *testing.T) {
 	}
 	defer f.Close()
 
-	var m tea.Model = NewModel(true) // --ascii: deterministic, no glyph/emoji ambiguity in the assertion
+	var m tea.Model = NewModel(true, nil) // --ascii: deterministic, no glyph/emoji ambiguity in the assertion
 	_ = m.Init()
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 160, Height: 50})
 
@@ -64,5 +64,32 @@ func TestModel_ReplaySample(t *testing.T) {
 	}
 	if !strings.Contains(content, "bote") || !strings.Contains(content, "1080") {
 		t.Errorf("View() missing a winner/pot line (want \"bote\" and pot amount 1080)\n--- content ---\n%s", content)
+	}
+
+	// docs/TUI_PLAN.md T2 "Names everywhere": the pot_awarded log line (and
+	// every action line before it) must name the seat ("El Toro"), not
+	// "seat 1"/"#1" -- the root-cause bug this phase fixed was
+	// TableState.Apply's hand_start case never copying Seat.Name into its
+	// seatState (internal/protocol/state.go).
+	if !strings.Contains(content, "El Toro") {
+		t.Errorf("View() log should use the winner's real name (\"El Toro\"), not a bare seat index\n--- content ---\n%s", content)
+	}
+	if strings.Contains(content, "seat 1 ") || strings.Contains(content, "#1 ") {
+		t.Errorf("View() log still has a raw seat placeholder instead of a name\n--- content ---\n%s", content)
+	}
+
+	// docs/TUI_PLAN.md T2 "Side panel with tabs": every "reasoning" event
+	// in the recording should have landed in the Razonamiento tab's
+	// viewport, wrapped into hand/odds/reads/plan lines.
+	tm, ok := m.(Model)
+	if !ok {
+		t.Fatalf("Update returned unexpected model type %T", m)
+	}
+	if len(tm.reasonBuf) == 0 {
+		t.Fatal("reasonBuf is empty: no \"reasoning\" events from the recording reached the side panel")
+	}
+	reasonContent := tm.reasonVP.GetContent()
+	if !strings.Contains(reasonContent, "plan:") {
+		t.Errorf("Razonamiento tab content missing a \"plan:\" line\n--- content ---\n%s", reasonContent)
 	}
 }

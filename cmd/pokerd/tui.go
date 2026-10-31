@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -27,7 +28,8 @@ func runTui(args []string) error {
 		return err
 	}
 
-	endpoint, err := tui.NormalizeURL(*url, resolveToken(*token))
+	tok := resolveToken(*token)
+	endpoint, err := tui.NormalizeURL(*url, tok)
 	if err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}
@@ -35,10 +37,27 @@ func runTui(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	model := tui.NewModel(*ascii)
+	// Best-effort: seed names/persona/model from GET /api/config so the
+	// TUI doesn't show "seat N" placeholders for the first few seconds
+	// before a "snapshot"/"hand_start" arrives over the WebSocket
+	// (docs/TUI_PLAN.md T2 "Names everywhere"). A failure here (server
+	// without /api/config, offline, wrong token) is not fatal -- the wire
+	// stream fills names in on its own either way.
+	fetchCtx, cancelFetch := context.WithTimeout(ctx, 3*time.Second)
+	seeds, _ := tui.FetchConfig(fetchCtx, *url, tok)
+	cancelFetch()
+
+	model := tui.NewModel(*ascii, seeds)
 	program := tea.NewProgram(model, tea.WithContext(ctx))
 
 	client := tui.NewClient(endpoint, program)
+	// SetClientMsg hands the Model a way to send control{pause/resume/
+	// step/speed} back over this same connection (docs/TUI_PLAN.md T2
+	// "Controls"). Sent before client.Run starts; tea.Program's message
+	// queue accepts Sends before Run() the same way the pre-existing
+	// ConnStateMsg{"connecting"} send below already relied on.
+	program.Send(tui.SetClientMsg{Client: client})
+
 	clientCtx, cancelClient := context.WithCancel(ctx)
 	defer cancelClient()
 	go client.Run(clientCtx)
