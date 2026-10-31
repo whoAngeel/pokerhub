@@ -42,7 +42,9 @@ func (h *Hand) legalActions(seat int) []LegalAction {
 		}
 	}
 
-	if p.Stack > 0 {
+	// Shoving more than the call amount is a raise, which a seat that may
+	// not re-raise (incomplete all-in didn't reopen betting) can't make.
+	if p.Stack > 0 && (p.CanRaise || h.currentBet == 0 || p.Stack <= toCall) {
 		acts = append(acts, LegalAction{Type: AllIn, Amount: p.Stack})
 	}
 	return acts
@@ -234,10 +236,10 @@ func (h *Hand) resolveFoldWin(winner int) []Event {
 
 	p := h.players[winner]
 	p.Stack += amount
-	for _, seat := range h.seatOrder {
-		h.players[seat].TotalInPot = 0
-		h.players[seat].BetThisStreet = 0
-	}
+	// TotalInPot/BetThisStreet are left as-is (not zeroed): they still
+	// accurately describe what each seat put in this hand, and keeping
+	// them makes "pots sum == contributions" checkable uniformly with
+	// the showdown path.
 
 	pot := Pot{Amount: amount, Eligible: []int{winner}, Winners: []int{winner}}
 	h.pots = []Pot{pot}
