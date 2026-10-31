@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/client-action-payload",
+  "properties": {
+    "type": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "type"
+  ]
+}

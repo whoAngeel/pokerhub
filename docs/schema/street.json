@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/street-payload",
+  "properties": {
+    "street": {
+      "type": "string"
+    },
+    "board": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "street",
+    "board"
+  ]
+}

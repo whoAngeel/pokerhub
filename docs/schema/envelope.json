@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/envelope",
+  "properties": {
+    "v": {
+      "type": "integer"
+    },
+    "seq": {
+      "type": "integer"
+    },
+    "ts": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "hand_id": {
+      "type": "integer"
+    },
+    "payload": true
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "v",
+    "seq",
+    "ts",
+    "type",
+    "hand_id",
+    "payload"
+  ]
+}

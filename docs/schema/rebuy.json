@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/rebuy-payload",
+  "properties": {
+    "seat": {
+      "type": "integer"
+    },
+    "amount": {
+      "type": "integer"
+    },
+    "stack_after": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "seat",
+    "amount",
+    "stack_after"
+  ]
+}

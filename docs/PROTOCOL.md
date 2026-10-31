@@ -378,6 +378,23 @@ No se necesita Ollama ni GPU para trabajar en la interfaz:
   y en `docs/schema/`. Un cliente puede negociar o detectar la versión
   leyendo `v` en el primer mensaje recibido.
 
+## 8.1 Desviaciones de implementación (fase 3, servidor en tiempo real)
+
+Al construir `internal/protocol`/`internal/server`/`internal/replay` (fase
+3) se añadió **un** mensaje servidor→cliente que esta sección no listaba
+todavía:
+
+- **`error`** (servidor→cliente): `{"message": string}`. Es la única
+  respuesta a un `action` entrante en el MVP (§5: "un action ilegal se
+  descarta con un mensaje de error, fuera del alcance de este documento en
+  el MVP") y también se usa para un `control{cmd}` desconocido. Aditivo per
+  §8 (un cliente que no conoce `"error"` puede ignorarlo con seguridad), no
+  sube `v`. Esquema generado en `docs/schema/error.json`.
+
+Todo lo demás (envoltorio, los 16 eventos de §4, los 3 mensajes de §5,
+`Card`/`Seat`/`LegalAction` de §3) se implementó tal cual está documentado
+aquí; `Project`/`TableState`/`Converter` no introdujeron más desviaciones.
+
 ## 9. Diferencias con el frontend actual
 
 El frontend ya empujado en `client/` (`Agent Royale`) es, según su propio

@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -329,5 +331,43 @@ func TestLegalActionsSpanish(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("legalActionsSpanish() = %q, want it to contain %q", out, want)
 		}
+	}
+}
+
+func TestParseAndNormalize_GarbledHandReplaced(t *testing.T) {
+	tests := []struct {
+		name     string
+		hand     string
+		wantHand string
+		wantWarn bool
+	}{
+		{"code residue", "]), ", "pareja de reyes", true},
+		{"python dict", "{'hole': ['Ah', 'Kd']}", "pareja de reyes", true},
+		{"cards only", "AhKd", "AhKd", false},
+		{"normal text", "top pair con kicker as", "top pair con kicker as", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := player.DecisionView{
+				You:          player.Me{Hole: []string{"Ah", "Kd"}},
+				Board:        []string{"Ks", "7h", "2c"},
+				Helpers:      player.Helpers{MadeHand: "pareja de reyes"},
+				LegalActions: []player.LegalAction{{Type: "fold"}, {Type: "check"}},
+			}
+			raw, _ := json.Marshal(map[string]any{
+				"reasoning": map[string]string{"hand": tt.hand, "odds": "ok", "reads": "ok", "plan": "ok"},
+				"action":    "check", "amount": 0, "say": "",
+			})
+			d, err := ParseAndNormalize(string(raw), v)
+			if err != nil {
+				t.Fatalf("ParseAndNormalize: %v", err)
+			}
+			if d.Reasoning.Hand != tt.wantHand {
+				t.Errorf("hand = %q, want %q", d.Reasoning.Hand, tt.wantHand)
+			}
+			if got := slices.Contains(d.Meta.Warnings, "replaced_garbled:hand"); got != tt.wantWarn {
+				t.Errorf("warning present = %v, want %v (%v)", got, tt.wantWarn, d.Meta.Warnings)
+			}
+		})
 	}
 }

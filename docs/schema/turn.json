@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/turn-payload",
+  "properties": {
+    "seat": {
+      "type": "integer"
+    },
+    "to_call": {
+      "type": "integer"
+    },
+    "deadline_ms": {
+      "type": "integer"
+    },
+    "legal_actions": {
+      "items": {
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "min": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ]
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "seat",
+    "to_call",
+    "deadline_ms"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/blind-payload",
+  "properties": {
+    "seat": {
+      "type": "integer"
+    },
+    "type": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "integer"
+    },
+    "stack_after": {
+      "type": "integer"
+    },
+    "pot_after": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "seat",
+    "type",
+    "amount",
+    "stack_after",
+    "pot_after"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/hello-payload",
+  "properties": {
+    "role": {
+      "type": "string"
+    },
+    "seat": {
+      "type": "integer"
+    },
+    "last_seq": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "role"
+  ]
+}

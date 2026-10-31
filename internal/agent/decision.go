@@ -69,6 +69,13 @@ func ParseAndNormalize(content string, v player.DecisionView) (player.Decision, 
 		warnings = append(warnings, "hallucinated_cards:"+bad)
 	}
 
+	// Small models sometimes dump code-like junk into "hand" ("]), ",
+	// "{'hole': [...]}"). The engine already describes the hand, so use that.
+	if looksGarbled(reasoning.Hand) && v.Helpers.MadeHand != "" {
+		reasoning.Hand = v.Helpers.MadeHand
+		warnings = append(warnings, "replaced_garbled:hand")
+	}
+
 	return player.Decision{
 		Action:    player.Action{Type: actionType, Amount: amount},
 		Reasoning: reasoning,
@@ -314,4 +321,19 @@ func detectHallucinatedCards(r *player.Reasoning, v player.DecisionView) string 
 	}
 	sort.Strings(bad)
 	return strings.Join(bad, ",")
+}
+
+// looksGarbled flags free text that is really code/data residue: braces or
+// brackets, or fewer than 3 letters overall.
+func looksGarbled(s string) bool {
+	if strings.ContainsAny(s, "{}[]") {
+		return true
+	}
+	letters := 0
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			letters++
+		}
+	}
+	return letters < 3
 }

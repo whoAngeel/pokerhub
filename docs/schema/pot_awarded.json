@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/pot-awarded-payload",
+  "properties": {
+    "pots": {
+      "items": {
+        "properties": {
+          "amount": {
+            "type": "integer"
+          },
+          "winners": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "winners"
+        ]
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "pots"
+  ]
+}

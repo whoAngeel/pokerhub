@@ -1,4 +1,4 @@
-.PHONY: test vet build sim sim-mock run replay schema
+.PHONY: test vet build sim sim-mock run run-mock replay schema
 
 test:
 	go test -race ./...
@@ -18,8 +18,11 @@ sim-mock:
 run:
 	go run ./cmd/pokerd serve
 
+run-mock:
+	go run ./cmd/pokerd serve --mock
+
 replay:
-	go run ./cmd/pokerd replay
+	go run ./cmd/pokerd replay --speed 2 --loop recordings/sample.jsonl
 
 schema:
-	@echo "schema: not implemented yet (PLAN F3)"
+	go run ./tools/gen-schema

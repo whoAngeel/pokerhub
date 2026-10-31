@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/hand-start-payload",
+  "properties": {
+    "hand_id": {
+      "type": "integer"
+    },
+    "button": {
+      "type": "integer"
+    },
+    "small_blind": {
+      "type": "integer"
+    },
+    "big_blind": {
+      "type": "integer"
+    },
+    "seats": {
+      "items": {
+        "properties": {
+          "seat": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stack": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seat",
+          "name",
+          "stack"
+        ]
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "hand_id",
+    "button",
+    "small_blind",
+    "big_blind",
+    "seats"
+  ]
+}

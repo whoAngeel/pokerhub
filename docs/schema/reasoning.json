@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/reasoning-payload",
+  "properties": {
+    "seat": {
+      "type": "integer"
+    },
+    "hand": {
+      "type": "string"
+    },
+    "odds": {
+      "type": "string"
+    },
+    "reads": {
+      "type": "string"
+    },
+    "plan": {
+      "type": "string"
+    },
+    "meta": {
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "latency_ms": {
+          "type": "integer"
+        },
+        "tokens_out": {
+          "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "fallback": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "provider",
+        "model",
+        "latency_ms",
+        "tokens_out",
+        "retries",
+        "fallback",
+        "warnings"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "seat",
+    "hand",
+    "odds",
+    "reads",
+    "plan",
+    "meta"
+  ]
+}

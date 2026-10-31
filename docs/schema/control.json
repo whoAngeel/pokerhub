@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/control-payload",
+  "properties": {
+    "cmd": {
+      "type": "string"
+    },
+    "value": {
+      "type": "number"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "cmd"
+  ]
+}

@@ -34,6 +34,21 @@ func New(name string, p Persona, prov llm.Provider, providerName, model string) 
 	return &LLMAgent{name: name, persona: p, provider: prov, providerName: providerName, model: model}
 }
 
+// Warmup sends the real system prompt with a tiny request so the model is
+// loaded (and the persona's prompt prefix cached) before the first hand;
+// the first cold call otherwise takes several seconds. Errors are returned
+// for logging only: a failed warmup never stops the table.
+func (a *LLMAgent) Warmup(ctx context.Context) error {
+	_, err := a.provider.Complete(ctx, llm.Request{
+		Model:       a.model,
+		System:      SystemPrompt(a.persona),
+		User:        "Calentamiento: responde solo OK.",
+		MaxTokens:   4,
+		Temperature: 0,
+	})
+	return err
+}
+
 func (a *LLMAgent) Name() string { return a.name }
 func (a *LLMAgent) Kind() string { return "llm" }
 

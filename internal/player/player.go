@@ -107,3 +107,9 @@ type Player interface {
 	Kind() string // "llm" | "rulebot" | "human"
 	Decide(ctx context.Context, v DecisionView) Decision
 }
+
+// Warmer is optionally implemented by players backed by a model: the table
+// calls Warmup once before the first hand to absorb the model's cold start.
+type Warmer interface {
+	Warmup(ctx context.Context) error
+}

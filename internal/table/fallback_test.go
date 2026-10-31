@@ -56,10 +56,11 @@ func TestSession_DecisionTimeoutFallback(t *testing.T) {
 	cfg := defaultConfig()
 	cfg.DecisionTimeoutMS = 20 // far shorter than the mock provider's delay below
 
-	slow := llm.NewMock(llm.MockResponse{
-		Content: `{"reasoning":{"hand":"x","odds":"x","reads":"x","plan":"x"},"action":"check","amount":0,"say":""}`,
-		Delay:   300 * time.Millisecond,
-	})
+	slow := llm.NewMock(llm.MockResponse{Content: "OK"}, // consumed by Session warmup
+		llm.MockResponse{
+			Content: `{"reasoning":{"hand":"x","odds":"x","reads":"x","plan":"x"},"action":"check","amount":0,"say":""}`,
+			Delay:   300 * time.Millisecond,
+		})
 
 	players := []player.Player{
 		player.NewRuleBot("Bot0"),

@@ -1,6 +1,8 @@
 package table
 
 import (
+	"math"
+
 	"github.com/whoAngeel/pokerhub/internal/engine"
 	"github.com/whoAngeel/pokerhub/internal/player"
 )
@@ -23,8 +25,8 @@ func (s *Session) buildDecisionView(hand *engine.Hand, pub engine.PublicState, s
 
 	helpers := player.Helpers{
 		MadeHand: engine.MadeHand(pv.Hole, pub.Board),
-		Equity:   engine.Equity(pv.Hole, pub.Board, activeOpponentCount(pub, seat), s.equityIters(), s.rng),
-		PotOdds:  potOdds(pub.ToCall, pub.Pot),
+		Equity:   round2(engine.Equity(pv.Hole, pub.Board, activeOpponentCount(pub, seat), s.equityIters(), s.rng)),
+		PotOdds:  round2(potOdds(pub.ToCall, pub.Pot)),
 	}
 
 	return player.DecisionView{
@@ -50,6 +52,7 @@ func (s *Session) opponentsFor(pub engine.PublicState, seat int) []player.Oppone
 			continue
 		}
 		stats := s.stats.Stats(ps.Seat)
+		stats.VPIP, stats.PFR, stats.AF = round2(stats.VPIP), round2(stats.PFR), round2(stats.AF)
 		out = append(out, player.Opponent{
 			Seat:       ps.Seat,
 			Name:       s.names[ps.Seat],
@@ -103,6 +106,12 @@ func potOdds(toCall, pot int) float64 {
 		return 0
 	}
 	return float64(toCall) / float64(pot+toCall)
+}
+
+// round2 keeps prompt numbers short: small models copy long floats verbatim
+// and mangle them (seen: "pot_odds=0.0.14958333333333335").
+func round2(x float64) float64 {
+	return math.Round(x*100) / 100
 }
 
 func cardsToStrings(cards []engine.Card) []string {

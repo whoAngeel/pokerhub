@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/agent-error-payload",
+  "properties": {
+    "seat": {
+      "type": "integer"
+    },
+    "error": {
+      "type": "string"
+    },
+    "fallback": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "seat",
+    "error",
+    "fallback",
+    "warnings"
+  ]
+}

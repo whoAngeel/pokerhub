@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/snapshot-payload",
+  "properties": {
+    "hand_id": {
+      "type": "integer"
+    },
+    "street": {
+      "type": "string"
+    },
+    "button": {
+      "type": "integer"
+    },
+    "small_blind": {
+      "type": "integer"
+    },
+    "big_blind": {
+      "type": "integer"
+    },
+    "board": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "pot": {
+      "type": "integer"
+    },
+    "to_act": {
+      "type": "integer"
+    },
+    "seats": {
+      "items": {
+        "properties": {
+          "seat": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "persona_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "stack": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "bet_this_street": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "hole": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seat",
+          "name",
+          "persona_id",
+          "kind",
+          "stack",
+          "status",
+          "bet_this_street",
+          "model",
+          "hole"
+        ]
+      },
+      "type": "array"
+    },
+    "legal_actions": {
+      "items": {
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "min": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ]
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "hand_id",
+    "street",
+    "button",
+    "small_blind",
+    "big_blind",
+    "board",
+    "pot",
+    "to_act",
+    "seats"
+  ]
+}

@@ -40,9 +40,10 @@ type Session struct {
 	players []player.Player // index == seat
 	names   []string
 
-	sink  Sink
-	stats *memory.Tracker
-	rng   *rand.Rand
+	sink     Sink
+	warmedUp bool
+	stats    *memory.Tracker
+	rng      *rand.Rand
 
 	stacks map[int]int
 	button int
@@ -146,11 +147,13 @@ func (s *Session) waitIfPaused(ctx context.Context) error {
 	}
 }
 
-// Run plays up to `hands` hands, stopping cleanly after the CURRENT hand
+// Run plays up to `hands` hands (hands <= 0: until ctx is cancelled),
+// stopping cleanly after the CURRENT hand
 // completes if ctx is cancelled (a hand already in progress is never cut
 // off mid-way: per-decision timeouts are independent of ctx, see decide()).
 func (s *Session) Run(ctx context.Context, hands int) error {
-	for i := 0; i < hands; i++ {
+	s.warmup(ctx)
+	for i := 0; hands <= 0 || i < hands; i++ {
 		if err := ctx.Err(); err != nil {
 			return nil
 		}
@@ -160,6 +163,23 @@ func (s *Session) Run(ctx context.Context, hands int) error {
 		}
 	}
 	return nil
+}
+
+// warmup lets model-backed players load before the first hand (cold start
+// measured at ~5 s vs ~1.2 s warm). Players run sequentially: they usually
+// share one local model behind the GPU queue anyway.
+func (s *Session) warmup(ctx context.Context) {
+	if s.warmedUp {
+		return
+	}
+	s.warmedUp = true
+	for _, p := range s.players {
+		if w, ok := p.(player.Warmer); ok {
+			wctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			_ = w.Warmup(wctx)
+			cancel()
+		}
+	}
 }
 
 // playHand runs exactly one hand to completion: rebuy, deal, turn loop,

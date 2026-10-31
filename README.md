@@ -2,6 +2,7 @@
 
 Mesa de Texas Hold'em open source (solo fichas ficticias) donde agentes LLM con personalidad **razonan** sus jugadas y hablan en la mesa. El motor de juego es código determinista en Go; los LLM solo proponen acciones que el motor valida. Funciona 100 % local con [Ollama](https://ollama.com), sin claves de API.
 
+- Estado actual y qué falta: [docs/STATUS.md](docs/STATUS.md)
 - Plan y arquitectura: [docs/PLAN.md](docs/PLAN.md)
 - Contrato WebSocket para el frontend: [docs/PROTOCOL.md](docs/PROTOCOL.md)
 - Convenciones del backend: [CLAUDE.md](CLAUDE.md)
@@ -13,9 +14,9 @@ Mesa de Texas Hold'em open source (solo fichas ficticias) donde agentes LLM con 
 | Motor (reglas, side pots, evaluación, equity) | ✅ listo, con tests |
 | Proveedores LLM (Ollama / cualquier endpoint OpenAI-compatible, mock) | ✅ listo |
 | Agente LLM (prompt, JSON validado, reintento, fallback) + RuleBot | ✅ listo |
-| Mesa + simulación en terminal (`pokerd sim`) | 🚧 en curso |
-| Servidor WebSocket (`pokerd serve`) + replay | ⏳ siguiente fase |
-| Memoria de rivales (stats + notas) | 🚧 stats en curso, notas pendientes |
+| Mesa + simulación en terminal (`pokerd sim`) | ✅ listo |
+| Servidor WebSocket (`pokerd serve`) + replay + grabación | ✅ listo |
+| Memoria de rivales (stats + notas) | ✅ stats · ⏳ notas LLM |
 
 ## Estructura
 
@@ -85,14 +86,34 @@ go run ./cmd/pokerd sim --hands 3 --seed 7
 
 Flags: `--config` (por defecto `configs/config.yaml`), `--hands N`, `--seed N`, `--fast` (sin pausas entre acciones), `--mock` (todos los proveedores pasan a mock).
 
-### Servidor para el frontend (próxima fase)
+### Servidor para el frontend
 
 ```bash
-go run ./cmd/pokerd serve                                  # WebSocket en server.addr
-go run ./cmd/pokerd replay recordings/<partida>.jsonl --speed 2   # sin GPU
+go run ./cmd/pokerd serve                    # partida real con Ollama, WebSocket en server.addr
+go run ./cmd/pokerd serve --mock             # sin GPU (agentes mock)
+go run ./cmd/pokerd serve --record recordings/mi-partida.jsonl
+go run ./cmd/pokerd replay --speed 2 --loop recordings/sample.jsonl   # sin GPU, partida real grabada
 ```
 
-El contrato de eventos está en [docs/PROTOCOL.md](docs/PROTOCOL.md). Por defecto escucha en `127.0.0.1:8080`. Para abrirlo desde otra máquina por Tailscale, cambia `server.addr` en `configs/config.yaml` (p. ej. `"0.0.0.0:8080"`). No tiene autenticación: exponlo solo en una red de confianza.
+Atajos: `make run`, `make run-mock`, `make replay`. Flags de `serve`: `--addr host:port`, `--seed`, `--fast`, `--mock`, `--record`. `sim` también acepta `--record`.
+
+Endpoints (contrato completo en [docs/PROTOCOL.md](docs/PROTOCOL.md); JSON Schema en `docs/schema/`):
+
+| Endpoint | Qué |
+|---|---|
+| `GET /healthz` | `OK` |
+| `GET /api/config` | ciegas, buy-in y asientos (nombre, persona, tipo, modelo) |
+| `GET /ws?role=spectator` | vista dios: todas las cartas + `reasoning` |
+| `GET /ws?role=player&seat=N` | solo las cartas del asiento N; nunca `reasoning` |
+
+Prueba rápida desde el navegador o con Node:
+
+```js
+const ws = new WebSocket("ws://127.0.0.1:8080/ws?role=spectator");
+ws.onmessage = (m) => console.log(JSON.parse(m.data));
+```
+
+`recordings/sample.jsonl` es una partida real (2 manos, `gemma4:e4b`) para desarrollar el frontend sin GPU. Por defecto se escucha en `127.0.0.1:8080`. Para abrirlo desde otra máquina por Tailscale, usa `--addr 0.0.0.0:8080` o cambia `server.addr`. No tiene autenticación: exponlo solo en una red de confianza.
 
 ### Configuración
 
