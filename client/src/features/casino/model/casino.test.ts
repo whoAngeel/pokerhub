@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { casinoReducer, createInitialTables, TABLE_CAPACITY } from './casino.js';
+import { casinoReducer, createInitialTables, TABLE_CAPACITY, type Table } from './casino.ts';
 
-function add(tables, overrides = {}) {
+function add(tables: Table[], overrides: Record<string, unknown> = {}) {
   return casinoReducer(tables, {
     type: 'agent/added',
     tableId: 'table-1',
@@ -10,7 +10,7 @@ function add(tables, overrides = {}) {
     name: 'Merlin',
     role: 'Analista',
     ...overrides,
-  });
+  } as Parameters<typeof casinoReducer>[1]);
 }
 
 test('each table has an independent session and team', () => {
@@ -34,7 +34,7 @@ test('nine seats per table, without affecting availability at the other table', 
 
 test('honors requested seats and rejects occupied or invalid seats', () => {
   const initial = createInitialTables();
-  assert.equal(add(initial, { seat: 2 })[0].agents.at(-1).seat, 2);
+  assert.equal(add(initial, { seat: 2 })[0].agents.at(-1)?.seat, 2);
   for (const seat of [0, -1, 9, 1.5]) assert.equal(add(initial, { seat })[0], initial[0]);
   for (const values of [{ name: '  ' }, { role: 'invalid' }, { id: 'agent-1' }])
     assert.equal(add(initial, values)[0], initial[0]);
@@ -51,7 +51,7 @@ test('removing an agent preserves other seats and makes that seat available agai
     removed[0].agents.map((agent) => agent.seat),
     [3, 6],
   );
-  assert.equal(add(removed, { seat: 0 })[0].agents.at(-1).seat, 0);
+  assert.equal(add(removed, { seat: 0 })[0].agents.at(-1)?.seat, 0);
 });
 
 test('removing the final agent stops the table and an empty table cannot start', () => {

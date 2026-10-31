@@ -170,6 +170,56 @@
   display: grid;
   place-items: center;
 }
+/* Idle presence: every seated agent breathes gently, staggered per seat so
+   the table doesn't move in lockstep. Independent of turn state. */
+.seat.occupied .chair {
+  animation: chair-idle 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--seat-i, 0) * -0.45s);
+}
+@keyframes chair-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.seat.thinking .chair {
+  animation: chair-thinking 0.85s ease-in-out infinite;
+  border-color: #8ebdb6;
+  box-shadow:
+    inset 3px 3px #8e5f69,
+    3px 4px #19131e,
+    0 0 10px #8ebdb666;
+}
+@keyframes chair-thinking {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-1.5deg);
+  }
+}
+.thought {
+  position: absolute;
+  right: 2px;
+  top: -16px;
+  color: #cfe3da;
+  font-size: 13px;
+  letter-spacing: 2px;
+  animation: thought-pulse 1.1s ease-in-out infinite;
+}
+@keyframes thought-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 .chair svg {
   transform: translateY(-8px);
   filter: drop-shadow(2px 3px #16121b);
@@ -207,7 +257,21 @@
 }
 .speaking .chair {
   border-color: var(--accent);
-  box-shadow: 0 0 14px #e1b67a44;
+  animation: chair-speak 0.6s ease-in-out infinite alternate;
+}
+@keyframes chair-speak {
+  from {
+    box-shadow:
+      inset 3px 3px #8e5f69,
+      3px 4px #19131e,
+      0 0 8px #e1b67a44;
+  }
+  to {
+    box-shadow:
+      inset 3px 3px #8e5f69,
+      3px 4px #19131e,
+      0 0 18px #e1b67a88;
+  }
 }
 .bubble {
   position: absolute;
@@ -229,4 +293,13 @@
   padding: 0 13px;
   color: #958a9f;
   font-size: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat.occupied .chair,
+  .seat.thinking .chair,
+  .seat.speaking .chair,
+  .thought,
+  .bubble {
+    animation: none;
+  }
 }

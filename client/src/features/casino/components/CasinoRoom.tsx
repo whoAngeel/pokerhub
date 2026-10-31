@@ -1,9 +1,24 @@
-import React from 'react';
 import PokerTable from './PokerTable';
+import type { Table } from '../model/casino';
+import type { Theme } from '../../themes/themes';
 import '../styles/scene.css';
 import '../styles/casino.css';
 
-export default function CasinoRoom({ tables, theme, onAddAgent, onSelectAgent, onToggleSession }) {
+interface CasinoRoomProps {
+  tables: Table[];
+  theme: Theme;
+  onAddAgent: (tableId?: string, seat?: number) => void;
+  onSelectAgent: (tableId: string, agentId: string) => void;
+  onToggleSession: (tableId: string) => void;
+}
+
+export default function CasinoRoom({
+  tables,
+  theme,
+  onAddAgent,
+  onSelectAgent,
+  onToggleSession,
+}: CasinoRoomProps) {
   return (
     <section className="casino" aria-label="Sala de casino con dos mesas">
       <div className="room-wall">

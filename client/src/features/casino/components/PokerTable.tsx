@@ -1,11 +1,25 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import { Pause, Play, Plus } from 'lucide-react';
 import AgentAvatar from '../../agents/components/AgentAvatar';
-import { TABLE_CAPACITY } from '../model/casino';
+import { TABLE_CAPACITY, type Table } from '../model/casino';
 import { useTableSession } from '../hooks/useTableSession';
 
-export default function PokerTable({ table, index, onAddAgent, onSelectAgent, onToggleSession }) {
-  const speakingId = useTableSession(table);
+interface PokerTableProps {
+  table: Table;
+  index: number;
+  onAddAgent: (tableId?: string, seat?: number) => void;
+  onSelectAgent: (tableId: string, agentId: string) => void;
+  onToggleSession: (tableId: string) => void;
+}
+
+export default function PokerTable({
+  table,
+  index,
+  onAddAgent,
+  onSelectAgent,
+  onToggleSession,
+}: PokerTableProps) {
+  const { agentId: activeAgentId, phase } = useTableSession(table);
   return (
     <section className="table-zone" aria-label={table.name}>
       <div className="table-zone-header">
@@ -35,21 +49,27 @@ export default function PokerTable({ table, index, onAddAgent, onSelectAgent, on
         {Array.from({ length: TABLE_CAPACITY }, (_, seat) => {
           const agent = table.agents.find((item) => item.seat === seat);
           const angle = ((-90 + seat * 40) * Math.PI) / 180;
-          const speaking = agent?.id === speakingId;
+          const isActive = agent?.id === activeAgentId;
+          const thinking = isActive && phase === 'thinking';
+          const speaking = isActive && phase === 'speaking';
+          const stateLabel = thinking ? ' (pensando)' : speaking ? ' (hablando)' : '';
           return (
             <button
               key={seat}
-              className={`seat ${agent ? 'occupied' : 'empty'} ${speaking ? 'speaking' : ''}`}
-              style={{
-                left: `${50 + 37 * Math.cos(angle)}%`,
-                top: `${50 + 35 * Math.sin(angle)}%`,
-              }}
+              className={`seat ${agent ? 'occupied' : 'empty'} ${thinking ? 'thinking' : ''} ${speaking ? 'speaking' : ''}`}
+              style={
+                {
+                  left: `${50 + 37 * Math.cos(angle)}%`,
+                  top: `${50 + 35 * Math.sin(angle)}%`,
+                  '--seat-i': seat,
+                } as CSSProperties
+              }
               onClick={() =>
                 agent ? onSelectAgent(table.id, agent.id) : onAddAgent(table.id, seat)
               }
               aria-label={
                 agent
-                  ? `${agent.name}, ${agent.role}, ${table.name}`
+                  ? `${agent.name}, ${agent.role}, ${table.name}${stateLabel}`
                   : `Añadir agente al asiento ${seat + 1} de ${table.name}`
               }
             >
@@ -62,6 +82,11 @@ export default function PokerTable({ table, index, onAddAgent, onSelectAgent, on
                     <i />
                     {agent.name}
                   </span>
+                  {thinking && (
+                    <span className="thought" aria-hidden="true">
+                      ⋯
+                    </span>
+                  )}
                   {speaking && (
                     <span className="bubble" aria-label="Colaborando">
                       •••

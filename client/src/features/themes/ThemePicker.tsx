@@ -1,14 +1,18 @@
-import React from 'react';
-import { THEMES } from './themes';
+import { THEMES, type ThemeId } from './themes';
 
-export default function ThemePicker({ value, onChange }) {
+interface ThemePickerProps {
+  value: ThemeId;
+  onChange: (value: ThemeId) => void;
+}
+
+export default function ThemePicker({ value, onChange }: ThemePickerProps) {
   return (
     <label className="theme-picker">
       <span>{THEMES[value].icon}</span>
       <select
         aria-label="Temática del casino"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value as ThemeId)}
       >
         {Object.entries(THEMES).map(([id, theme]) => (
           <option key={id} value={id}>

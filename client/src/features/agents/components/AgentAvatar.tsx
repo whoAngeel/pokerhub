@@ -1,6 +1,11 @@
-import React from 'react';
+import type { Agent } from '../../casino/model/casino';
 
-export default function AgentAvatar({ agent, size = 42 }) {
+interface AgentAvatarProps {
+  agent: Agent;
+  size?: number;
+}
+
+export default function AgentAvatar({ agent, size = 42 }: AgentAvatarProps) {
   return (
     <svg
       width={size}

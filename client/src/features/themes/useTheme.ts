@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_THEME, THEMES } from './themes';
+import { DEFAULT_THEME, THEMES, type ThemeId } from './themes';
+
+function isThemeId(value: string | null): value is ThemeId {
+  return value !== null && Object.hasOwn(THEMES, value);
+}
 
 export function useTheme() {
-  const [themeId, setThemeId] = useState(() => {
+  const [themeId, setThemeId] = useState<ThemeId>(() => {
     try {
       const stored = localStorage.getItem('royale-theme');
-      return Object.hasOwn(THEMES, stored) ? stored : DEFAULT_THEME;
+      return isThemeId(stored) ? stored : DEFAULT_THEME;
     } catch {
       return DEFAULT_THEME;
     }

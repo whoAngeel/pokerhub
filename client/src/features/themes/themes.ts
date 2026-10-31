@@ -23,5 +23,8 @@ export const THEMES = {
     floor: '#22263c',
     sign: 'THE NEON CLUB',
   },
-};
-export const DEFAULT_THEME = 'halloween';
+} as const;
+
+export type ThemeId = keyof typeof THEMES;
+export type Theme = (typeof THEMES)[ThemeId];
+export const DEFAULT_THEME: ThemeId = 'halloween';
