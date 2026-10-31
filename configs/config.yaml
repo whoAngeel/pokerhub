@@ -1,0 +1,40 @@
+# Configuración de la mesa. Ver docs/PLAN.md §6 y §6.1.
+server:
+  addr: "127.0.0.1:8080"   # tailnet: "100.98.127.108:8080" o "0.0.0.0:8080"
+  debug: false             # true = rol spectator permitido aunque haya humano sentado
+
+providers:
+  local:
+    type: openai
+    base_url: http://localhost:11434/v1
+    api_key_env: ""        # vacío = sin clave (servidores locales)
+    structured: json_schema
+    extra:
+      reasoning_effort: none   # apaga el thinking nativo de Ollama (imprescindible)
+  mock:
+    type: mock
+  # openrouter:
+  #   type: openai
+  #   base_url: https://openrouter.ai/api/v1
+  #   api_key_env: OPENROUTER_API_KEY
+  # lmstudio:
+  #   type: openai
+  #   base_url: http://localhost:1234/v1
+  #   structured: json_schema
+
+table:
+  small_blind: 5
+  big_blind: 10
+  buy_in: 1000
+  rebuy: auto
+  seed: 0                  # 0 = aleatorio; fija un número para reproducir partidas
+  action_delay_ms: 600
+  decision_timeout_ms: 10000
+  equity_iters: 2000
+
+seats:
+  - { type: rulebot, name: "Calculín" }   # asiento 0: futuro asiento humano
+  - { type: llm, persona: personas/toro.yaml,     provider: local, model: "gemma4:e4b" }
+  - { type: llm, persona: personas/abuela.yaml,   provider: local, model: "gemma4:e4b" }
+  - { type: llm, persona: personas/profesor.yaml, provider: local, model: "gemma4:e4b" }
+  - { type: llm, persona: personas/payaso.yaml,   provider: local, model: "gemma4:e4b" }
