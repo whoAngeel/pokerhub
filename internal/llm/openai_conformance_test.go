@@ -3,8 +3,8 @@ package llm_test
 import (
 	"testing"
 
-	"github.com/atzomx/pokerllm/internal/llm"
-	"github.com/atzomx/pokerllm/internal/llm/llmtest"
+	"github.com/whoAngeel/pokerhub/internal/llm"
+	"github.com/whoAngeel/pokerhub/internal/llm/llmtest"
 )
 
 // TestOpenAIConformance runs the shared llmtest conformance suite against

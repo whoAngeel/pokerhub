@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/atzomx/pokerllm/internal/player"
+	"github.com/whoAngeel/pokerhub/internal/player"
 )
 
 // chatHistoryLimit / sayCharLimit bound how much of DecisionView.Chat ends
