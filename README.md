@@ -18,6 +18,12 @@ Documentación:
 - TUI: [docs/TUI_PLAN.md](docs/TUI_PLAN.md)
 - Convenciones del backend: [CLAUDE.md](CLAUDE.md)
 
+## Imágenes
+
+![Captura de pantalla de Pokerhub](images/Captura%20de%20pantalla%202026-10-31%20163147.png)
+
+![Imagen de Pokerhub](images/WhatsApp%20Image%202026-10-31%20at%204.42.52%20PM.jpeg)
+
 ## Agentes
 
 Cuatro agentes LLM y un bot de reglas. Las personalidades viven en `configs/personas/*.yaml` y se pueden editar.
