@@ -1,0 +1,7 @@
+/bin/
+/dist/
+*.test
+*.out
+recordings/*.jsonl
+!recordings/sample.jsonl
+.env
