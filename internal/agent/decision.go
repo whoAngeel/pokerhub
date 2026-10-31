@@ -135,15 +135,19 @@ func normalizeAction(action string, amount int, legal []player.LegalAction) (str
 			amt = la.Max
 			warnings = append(warnings, "clamped_amount")
 		}
-		// Reaching the all-in ceiling promotes to all_in outright, using the
-		// all_in legal action's own amount if the engine lists one
-		// separately (PLAN §4.3: "amount >= stack -> all_in").
-		if allin, isLegal := byType["all_in"]; isLegal && amt >= allin.Amount {
+		// Reaching the bet/raise ceiling (after clamping) means going
+		// all-in (PLAN §4.3: "amount >= stack -> all_in"). When the engine
+		// also lists a separate "all_in" legal action, that one carries the
+		// authoritative chip amount (la.Max is only this bet/raise's own
+		// cap, which isn't necessarily the real all-in total) and wins over
+		// the clamped amount.
+		allin, hasAllin := byType["all_in"]
+		reachedCeiling := amt >= la.Max || (hasAllin && amt >= allin.Amount)
+		if reachedCeiling {
 			warnings = append(warnings, "normalized:"+action+"->all_in")
-			return "all_in", allin.Amount, warnings, true
-		}
-		if amt >= la.Max {
-			warnings = append(warnings, "normalized:"+action+"->all_in")
+			if hasAllin {
+				return "all_in", allin.Amount, warnings, true
+			}
 			return "all_in", amt, warnings, true
 		}
 		return action, amt, warnings, true
