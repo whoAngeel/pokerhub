@@ -23,7 +23,10 @@ func NewApp(hub *Hub, ctrl Controller, pub PublicConfig, debug bool, token strin
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Recover())
-	e.Use(middleware.Logger())
+	// Log the path only, never the raw URI: it carries ?token=<secret>.
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: `{"time":"${time_rfc3339}","remote_ip":"${remote_ip}","method":"${method}","path":"${path}","status":${status},"latency":"${latency_human}","error":"${error}"}` + "\n",
+	}))
 	e.Use(middleware.CORS()) // any origin for GET -- frontend dev runs on :3000
 
 	e.GET("/healthz", func(c echo.Context) error {

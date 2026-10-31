@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	lipgloss "charm.land/lipgloss/v2"
@@ -60,6 +61,9 @@ func (m *Model) layoutPanels() {
 	innerH := boxH - 2 - 2
 	if innerH < 2 {
 		innerH = 2
+	}
+	if os.Getenv("TUI_DEBUG_LAYOUT") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG layoutPanels: boxH=%d contentW=%d innerH=%d\n", boxH, contentW, innerH)
 	}
 	m.panelW = contentW
 	m.chatVP.SetWidth(contentW)
@@ -228,7 +232,16 @@ func (m Model) renderSidePanel(boxW, boxH int) string {
 	case tabMemory:
 		body = m.memoryVP.View()
 	}
+	if os.Getenv("TUI_DEBUG_LAYOUT") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG renderSidePanel: activeTab=%d reasonVP.Height()=%d reasonVP.Width()=%d body lines=%d\n",
+			m.activeTab, m.reasonVP.Height(), m.reasonVP.Width(), lipgloss.Height(body))
+	}
 
 	content := lipgloss.JoinVertical(lipgloss.Left, tabBar, rule, body)
-	return panelBoxStyle.Width(contentW).Height(boxH - 2).Render(content)
+	rendered := panelBoxStyle.Width(contentW).Height(boxH - 2).Render(content)
+	if os.Getenv("TUI_DEBUG_LAYOUT") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG renderSidePanel2: content lines=%d tabBar.H=%d rule.H=%d rendered lines=%d\n",
+			lipgloss.Height(content), lipgloss.Height(tabBar), lipgloss.Height(rule), lipgloss.Height(rendered))
+	}
+	return rendered
 }

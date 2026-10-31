@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -80,6 +81,10 @@ func (m Model) renderView() tea.View {
 		}
 	}
 
+	if os.Getenv("TUI_DEBUG_LAYOUT") != "" {
+		fmt.Fprintf(os.Stderr, "DEBUG layout: m.height=%d panelH(want)=%d table.H=%d panel.H=%d body.H=%d header.H=%d footer.H=%d\n",
+			m.height, panelH, lipgloss.Height(table), lipgloss.Height(m.renderSidePanel(panelBoxW, panelH)), lipgloss.Height(body), lipgloss.Height(header), lipgloss.Height(footer))
+	}
 	logLines := m.height - lipgloss.Height(body) - lipgloss.Height(header) - lipgloss.Height(footer) - 1
 	if logLines < 3 {
 		logLines = 3

@@ -14,6 +14,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -70,36 +71,66 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
-
-	conn, _, err := websocket.Dial(ctx, endpoint, nil)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "dial failed (is the server up / token correct?)")
-		os.Exit(1)
-	}
-	defer conn.Close(websocket.StatusNormalClosure, "")
-
 	var mdl tea.Model = tui.NewModel(false, seeds) // unicode glyphs for the report
 	mdl, _ = mdl.Update(tea.WindowSizeMsg{Width: 170, Height: 46})
 
 	n := 0
 	haveReasoning := false
-	for {
-		var env protocol.Envelope
-		if err := wsjson.Read(ctx, conn, &env); err != nil {
-			break
+
+	if os.Getenv("TUI_LOCAL") != "" {
+		// Local fallback (no live server needed): replay
+		// recordings/sample.jsonl the same way model_test.go does, for
+		// layout debugging independent of the live server's availability.
+		f, ferr := os.Open("recordings/sample.jsonl")
+		if ferr != nil {
+			fmt.Fprintln(os.Stderr, "open sample.jsonl failed:", ferr)
+			os.Exit(1)
 		}
-		mdl, _ = mdl.Update(tui.EnvMsg{Env: env})
-		n++
-		if env.Type == protocol.TypeReasoning {
-			haveReasoning = true
+		defer f.Close()
+		sc := bufio.NewScanner(f)
+		sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
+		for sc.Scan() {
+			line := strings.TrimSpace(sc.Text())
+			if line == "" {
+				continue
+			}
+			var env protocol.Envelope
+			if err := json.Unmarshal([]byte(line), &env); err != nil {
+				continue
+			}
+			mdl, _ = mdl.Update(tui.EnvMsg{Env: env})
+			n++
+			if env.Type == protocol.TypeReasoning {
+				haveReasoning = true
+			}
 		}
-		// Stop once we have at least one reasoning event and a decent
-		// amount of table activity, so the frame has something in every
-		// tab without waiting the full 8s budget.
-		if haveReasoning && n > 25 {
-			break
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+
+		conn, _, derr := websocket.Dial(ctx, endpoint, nil)
+		if derr != nil {
+			fmt.Fprintln(os.Stderr, "dial failed (is the server up / token correct?)")
+			os.Exit(1)
+		}
+		defer conn.Close(websocket.StatusNormalClosure, "")
+
+		for {
+			var env protocol.Envelope
+			if err := wsjson.Read(ctx, conn, &env); err != nil {
+				break
+			}
+			mdl, _ = mdl.Update(tui.EnvMsg{Env: env})
+			n++
+			if env.Type == protocol.TypeReasoning {
+				haveReasoning = true
+			}
+			// Stop once we have at least one reasoning event and a decent
+			// amount of table activity, so the frame has something in every
+			// tab without waiting the full 8s budget.
+			if haveReasoning && n > 25 {
+				break
+			}
 		}
 	}
 	fmt.Fprintf(os.Stderr, "read %d envelopes (reasoning seen: %v)\n", n, haveReasoning)
