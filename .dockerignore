@@ -1,0 +1,8 @@
+.env
+.git
+bin/
+client/node_modules/
+client/dist/
+recordings/*.jsonl
+!recordings/sample.jsonl
+*.test

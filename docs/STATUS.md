@@ -25,7 +25,7 @@ El backend juega partidas completas con agentes LLM reales y las sirve **en tiem
 | F3 | Filtro único por rol `server.Project`, Hub (seq, ring buffer, cliente lento), Echo `/healthz` `/api/config` `/ws` | `internal/server/` | test de visibilidad + e2e WS; verificado a mano: player:2 no recibe `reasoning` y su `snapshot` solo trae sus cartas |
 | F3 | Recorder JSONL + replay con speed/pause/loop; `pokerd serve`, `replay`, `sim --record` | `internal/replay/`, `cmd/pokerd/` | test grabar→reproducir + prueba manual |
 | F5 | Notas LLM privadas por rival tras cada showdown (baja prioridad, ≤3 por rival), en el prompt del observador; evento `memory_update` con `observer`; `table.memory_notes` | `internal/memory/notes.go`, `internal/table/memory.go` | 1 test de privacidad + partida real |
-| — | Config "nube" `configs/api.yaml` (OpenRouter + Google AI Studio, un modelo por personaje) junto a la local `configs/config.yaml`; `pokerd` lee `.env` | `configs/api.yaml`, `cmd/pokerd/dotenv.go` | OpenRouter probado con clave real (Haiku, DeepSeek); **Gemma en AI Studio pendiente de `GOOGLE_API_KEY`** |
+| — | Config "nube" `configs/api.yaml` (OpenRouter + Google AI Studio, un modelo por personaje) junto a la local `configs/config.yaml`; `pokerd` lee `.env` | `configs/api.yaml`, `cmd/pokerd/dotenv.go` | probado con claves reales (OpenRouter OK; Gemma en AI Studio descartado por thinking forzado, ver DEPLOY.md) |
 | F3 | Partida real grabada para el frontend (2 manos, gemma4:e4b, 147 eventos) | `recordings/sample.jsonl` | cada línea parsea, `seq` creciente |
 
 Calidad (ya aplicado): español forzado en todos los campos, números redondeados a 2 decimales en el prompt, calentamiento del modelo antes de la 1.ª mano (5.3 s → 1.2 s), temperatura de El Payaso 0.8, campo `reasoning.hand` con basura se reemplaza por `made_hand`.
@@ -55,7 +55,7 @@ Deudas técnicas pequeñas de la fase 3:
 |---|---|---|
 | F4 | Revisar que las 4 personalidades se distinguen en juego real; ajustar `strategy`/`voice` en `configs/personas/*.yaml` | Ya funcionan con modelo/proveedor por asiento |
 | — | **Examen de razonamiento**: escenarios con respuesta obvia (nuts → no retirarse; 7-2 contra all-in → retirarse), en espejo mano fuerte/débil, nota por agente y modelo | Responde a "¿razonan o solo actúan el personaje?". Datos actuales: plan y acción coinciden en ~88 %, pero El Toro sube el 96 % de las veces |
-| — | Probar Gemma 4 26B en AI Studio cuando exista `GOOGLE_API_KEY`: confirmar el id exacto (`GET …/v1beta/openai/models`) y que `structured: prompt` da JSON válido | |
+| — | Desplegar en un Droplet de DigitalOcean con `deploy/docker-compose.droplet.yml` (imagen probada en local) y decidir el acceso (firewall o Tailscale) | Guía en [DEPLOY.md](DEPLOY.md). Ojo: `serve` gasta API sin parar (~3 $/día) |
 | F6 | `docker compose` (app en contenedor, Ollama en el host vía `host.docker.internal:11434`) + `Dockerfile` | PLAN §9. Recortable: `make run` basta |
 | F6 | `pokerd probe` (verifica un modelo: % JSON válido, latencia, español) + `docs/MODELS.md` | PLAN §6.1. Candidato a "good first issue" |
 | — | **TUI con Charm** (Bubble Tea v2): visor en vivo, paneles de chat/razonamiento/memoria y, más adelante, jugar como humano | Plan completo en [TUI_PLAN.md](TUI_PLAN.md), ~4 h para T1+T2 |

@@ -1,0 +1,26 @@
+# Droplet de DigitalOcean: backend (modelos por API) + cliente web.
+# Uso (desde la raíz del repo):  docker compose -f deploy/docker-compose.droplet.yml up -d --build
+services:
+  pokerd:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file: ../.env              # OPENROUTER_API_KEY (y opcionalmente GOOGLE_API_KEY)
+    command: ["serve", "--config", "configs/api.yaml", "--addr", "0.0.0.0:8090",
+              "--record", "recordings/live.jsonl"]
+    ports:
+      - "8090:8090"                # WebSocket: ws://<ip-droplet>:8090/ws?role=spectator
+    volumes:
+      - recordings:/app/recordings
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ../client
+    ports:
+      - "80:80"
+    depends_on: [pokerd]
+    restart: unless-stopped
+
+volumes:
+  recordings:

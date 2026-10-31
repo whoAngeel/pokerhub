@@ -3,6 +3,7 @@
 Mesa de Texas Hold'em open source (solo fichas ficticias) donde agentes LLM con personalidad **razonan** sus jugadas y hablan en la mesa. El motor de juego es código determinista en Go; los LLM solo proponen acciones que el motor valida. Funciona 100 % local con [Ollama](https://ollama.com), sin claves de API.
 
 - Estado actual y qué falta: [docs/STATUS.md](docs/STATUS.md)
+- Despliegue local (GPU) y en la nube (DigitalOcean): [docs/DEPLOY.md](docs/DEPLOY.md)
 - Plan y arquitectura: [docs/PLAN.md](docs/PLAN.md)
 - Contrato WebSocket para el frontend: [docs/PROTOCOL.md](docs/PROTOCOL.md)
 - Convenciones del backend: [CLAUDE.md](CLAUDE.md)
@@ -131,10 +132,9 @@ seats:
 ```
 
 - **Otro modelo u otro servidor:** cualquier endpoint compatible con OpenAI (vLLM, llama.cpp `server`, LM Studio, OpenRouter, Groq…) se añade como provider con `type: openai` y su `base_url`. Cada asiento puede usar un provider y un modelo distintos. Si el servidor no soporta `json_schema`, usa `structured: json_object` o `structured: prompt`.
-- **Dos configuraciones:** `configs/config.yaml` (todo local con gemma en Ollama, sin claves) y `configs/api.yaml` (todo en la nube, sin GPU, un modelo distinto por personaje: El Toro con Gemma 4 26B en Google AI Studio, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con Llama 4 Scout, los tres por OpenRouter).
+- **Dos configuraciones:** `configs/config.yaml` (todo local con gemma en Ollama, sin claves) y `configs/api.yaml` (todo en la nube, sin GPU, un modelo distinto por personaje: El Toro con Gemma 4 26B, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con Llama 4 Scout, todos por OpenRouter).
   ```bash
   echo 'OPENROUTER_API_KEY=sk-or-...' >> .env   # pokerd lee .env al arrancar; .env está en .gitignore
-  echo 'GOOGLE_API_KEY=...' >> .env             # https://aistudio.google.com/apikey
   go run ./cmd/pokerd sim --config configs/api.yaml --hands 3
   ```
   Para cambiar el modelo de un personaje, edita el `model` de su asiento (catálogo: https://openrouter.ai/models, con soporte de "structured outputs").
