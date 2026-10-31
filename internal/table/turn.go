@@ -93,13 +93,19 @@ func fallbackAction(legal []engine.LegalAction) engine.Action {
 }
 
 // fallbackCause renders Decision.Meta into an agent_error Cause string, or
-// "" when there's nothing worth reporting (no fallback, no warnings).
+// "" when there's nothing to report. Per docs/PROTOCOL.md, agent_error is
+// reserved for an actual fallback (Meta.Fallback == true) or a table-level
+// illegal-action override (see the separate "illegal_action: " emit below);
+// a decision that only carries normalization Warnings (clamped_amount,
+// normalized:bet->raise, ...) without falling back is NOT an agent_error --
+// those warnings still ride along on the reasoning event's Meta, visible to
+// spectators there.
 func fallbackCause(m player.DecisionMeta) string {
-	if len(m.Warnings) == 0 {
-		if m.Fallback {
-			return "fallback"
-		}
+	if !m.Fallback {
 		return ""
+	}
+	if len(m.Warnings) == 0 {
+		return "fallback"
 	}
 	cause := m.Warnings[0]
 	for _, w := range m.Warnings[1:] {

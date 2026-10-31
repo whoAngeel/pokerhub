@@ -91,3 +91,38 @@ func TestSession_DecisionTimeoutFallback(t *testing.T) {
 		t.Fatalf("hand never completed after the timeout fallback")
 	}
 }
+
+// TestSession_WarningsOnlyDecisionIsNotAgentError asserts that a decision
+// which only carries Meta.Warnings (no Meta.Fallback, no illegal action)
+// never produces an agent_error event: per docs/PROTOCOL.md, agent_error is
+// reserved for an actual fallback or a table-level illegal-action override.
+// Plain warnings stay inside the reasoning event's Meta.
+func TestSession_WarningsOnlyDecisionIsNotAgentError(t *testing.T) {
+	cfg := defaultConfig()
+	players := []player.Player{
+		player.NewRuleBot("Bot0"),
+		&warningsOnlyPlayer{name: "Warny1"},
+		player.NewRuleBot("Bot2"),
+	}
+	sink := &captureSink{}
+	sess, err := NewSession(cfg, players, sink)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	if err := sess.Run(context.Background(), 3); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	var sawReasoningWithWarnings bool
+	for _, e := range sink.all() {
+		if e.Type == EvAgentError && e.Seat == 1 {
+			t.Fatalf("warnings-only decision must not raise agent_error: %+v", e)
+		}
+		if e.Type == EvReasoning && e.Seat == 1 && len(e.Meta.Warnings) > 0 {
+			sawReasoningWithWarnings = true
+		}
+	}
+	if !sawReasoningWithWarnings {
+		t.Fatalf("expected seat 1's warnings to still show up on its reasoning event")
+	}
+}

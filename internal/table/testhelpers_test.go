@@ -95,6 +95,34 @@ func (p *illegalPlayer) Decide(_ context.Context, v player.DecisionView) player.
 	return player.Decision{Action: player.Action{Type: "bet", Amount: 1}}
 }
 
+// warningsOnlyPlayer always takes a safe, legal action (check, else call,
+// else fold) but reports Decision.Meta.Warnings as if agent.ParseAndNormalize
+// had to correct something, WITHOUT setting Meta.Fallback. Used to assert
+// the table does NOT raise agent_error for mere normalization warnings
+// (docs/PROTOCOL.md reserves agent_error for actual fallbacks/illegal
+// actions; warnings alone stay inside the reasoning event's Meta).
+type warningsOnlyPlayer struct{ name string }
+
+func (p *warningsOnlyPlayer) Name() string { return p.name }
+func (p *warningsOnlyPlayer) Kind() string { return "warnings-only-test" }
+func (p *warningsOnlyPlayer) Decide(_ context.Context, v player.DecisionView) player.Decision {
+	action := player.Action{Type: "fold"}
+	for _, la := range v.LegalActions {
+		if la.Type == "check" {
+			action = player.Action{Type: "check"}
+			break
+		}
+		if la.Type == "call" {
+			action = player.Action{Type: "call", Amount: la.Amount}
+		}
+	}
+	return player.Decision{
+		Action:    action,
+		Reasoning: &player.Reasoning{Hand: "x", Odds: "x", Reads: "x", Plan: "x"},
+		Meta:      player.DecisionMeta{Warnings: []string{"clamped_amount"}, Fallback: false},
+	}
+}
+
 func defaultConfig() Config {
 	return Config{
 		SmallBlind:        5,

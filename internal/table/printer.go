@@ -156,9 +156,10 @@ func (p *Printer) onReasoning(e Event) {
 	extra += "]"
 	fmt.Fprintf(p.w, "%s\n", p.c(ansiDim, extra))
 
-	if e.Meta.LatencyMS > 0 {
-		p.recordLatency(p.nameOf(e.Seat), e.Meta.LatencyMS)
-	}
+	// Recorded unconditionally (even a 0ms mock latency is a real sample);
+	// only reasoning events count here, so a fallback decision with no
+	// Reasoning (nil) isn't double-counted via its agent_error event too.
+	p.recordLatency(p.nameOf(e.Seat), e.Meta.LatencyMS)
 }
 
 func (p *Printer) recordLatency(name string, ms int64) {
