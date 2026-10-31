@@ -1,0 +1,230 @@
+.casino {
+  margin: 0 12px 12px;
+}
+.room-wall {
+  height: 100px;
+}
+.casino-floor {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 30px, #19151e44 30px 32px),
+    repeating-linear-gradient(90deg, transparent 0 62px, #15121b33 62px 64px), var(--floor);
+  padding: 20px 40px;
+}
+.room-decor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 45px;
+  color: #819576;
+  font-size: 33px;
+}
+.tables-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(80px, 9vw, 160px);
+  padding: 35px 0 45px;
+}
+.table-zone {
+  min-width: 0;
+}
+.table-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+}
+.table-zone-header h2 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+}
+.table-zone-header > span:last-child {
+  margin-left: auto;
+  color: #b7a6c1;
+  font-size: 10px;
+}
+.table-number {
+  color: var(--accent);
+  border: 1px solid #8c718b66;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 10px;
+}
+.table-stage {
+  position: relative;
+  height: 400px;
+  margin: 20px 0;
+}
+.table-stage .carpet {
+  inset: 12px 0;
+}
+.table-stage .poker-table {
+  left: 21%;
+  top: 28%;
+  width: 58%;
+  height: 44%;
+}
+.table-stage .table-caption {
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.table-stage .table-caption span {
+  font-size: 6px;
+  letter-spacing: 1px;
+}
+.table-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #66506e66;
+  background: #201a27b3;
+  border-radius: 7px;
+}
+.table-controls > span {
+  font-size: 10px;
+  color: #c7b6d1;
+  margin-right: auto;
+}
+.table-controls .primary,
+.table-controls .secondary {
+  padding: 9px 11px;
+  font-size: 10px;
+}
+.icon-button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #655071;
+  border-radius: 5px;
+}
+.bottom-decor > span:nth-child(2) {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #ad90b2;
+}
+.room-footer {
+  height: 42px;
+  font-size: 10px;
+}
+.seat-name {
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes bob {
+  to {
+    transform: translateY(-4px);
+  }
+}
+@media (min-width: 1450px) {
+  .table-stage {
+    height: 470px;
+  }
+}
+@media (max-width: 1100px) {
+  .tables-layout {
+    grid-template-columns: 1fr;
+    gap: 100px;
+    max-width: 650px;
+    margin: auto;
+  }
+  .table-stage {
+    height: 440px;
+  }
+  .casino-floor {
+    padding: 20px 35px;
+  }
+}
+@media (max-width: 560px) {
+  .casino {
+    margin: 0 4px 4px;
+    border-width: 3px;
+  }
+  .casino-floor {
+    padding: 10px 8px;
+  }
+  .tables-layout {
+    gap: 85px;
+    padding: 20px 0 35px;
+  }
+  .room-wall {
+    height: 80px;
+  }
+  .shelf {
+    display: none;
+  }
+  .neon {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .table-stage {
+    height: 340px;
+  }
+  .table-stage .poker-table {
+    left: 17%;
+    width: 66%;
+    border-width: 5px;
+    padding: 6px;
+  }
+  .seat {
+    width: 58px;
+  }
+  .chair {
+    width: 36px;
+    height: 39px;
+  }
+  .chair svg {
+    width: 35px;
+    height: 42px;
+  }
+  .seat-name {
+    font-size: 8px;
+    max-width: 65px;
+  }
+  .empty-chair {
+    width: 28px;
+    height: 28px;
+    font-size: 17px;
+  }
+  .empty .seat-name {
+    font-size: 6px;
+  }
+  .table-stage .table-caption {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .cards {
+    gap: 2px;
+  }
+  .cards i {
+    width: 14px;
+    height: 21px;
+    font-size: 13px;
+  }
+  .table-controls {
+    padding: 9px 7px;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .table-controls > span {
+    font-size: 9px;
+  }
+  .table-zone-header {
+    padding: 0 3px;
+    gap: 7px;
+  }
+  .table-zone-header h2 {
+    font-size: 11px;
+  }
+  .table-zone-header > span:last-child {
+    font-size: 8px;
+  }
+  .bottom-decor > span:nth-child(2) {
+    font-size: 5px;
+    letter-spacing: 1px;
+  }
+  .room-footer {
+    font-size: 7px;
+    padding: 0 7px;
+  }
+}

@@ -1,0 +1,232 @@
+.casino {
+  position: relative;
+  background: #17141e;
+  margin: 0 14px;
+  border: 5px solid #211b28;
+  box-shadow: 0 0 0 1px #302936;
+  image-rendering: pixelated;
+}
+.room-wall {
+  height: 71px;
+  background: repeating-linear-gradient(
+    90deg,
+    #272130 0px,
+    #272130 49px,
+    #211c29 50px,
+    #211c29 52px
+  );
+  border-bottom: 8px solid #483340;
+  box-shadow: 0 4px #18131d;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.neon {
+  color: #dfa88f;
+  font:
+    bold 14px 'Space Grotesk',
+    monospace;
+  letter-spacing: 3px;
+  text-align: center;
+  text-shadow: 0 0 12px #eaa08085;
+  border: 3px double #875565;
+  padding: 6px 14px;
+  background: #211a2b;
+  transform: translateY(-2px);
+}
+.neon span {
+  display: block;
+  font-size: 6px;
+  letter-spacing: 3px;
+  color: #ad8aaf;
+  margin-top: 5px;
+}
+.shelf {
+  position: absolute;
+  left: 6%;
+  bottom: 14px;
+  width: 70px;
+  height: 28px;
+  border-bottom: 5px solid #71513c;
+  border-top: 4px solid #71513c;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 0 7px;
+  box-shadow: 0 4px #20191c;
+}
+.shelf.right {
+  left: auto;
+  right: 6%;
+}
+.shelf i {
+  width: 6px;
+  height: 17px;
+  background: #7f8c69;
+  border-top: 4px solid #b4a77a;
+}
+.shelf i:nth-child(2n) {
+  height: 12px;
+  background: #985e65;
+}
+.carpet {
+  position: absolute;
+  inset: 25px 12% 27px;
+  border: 4px double #70515b;
+  background: repeating-linear-gradient(
+    45deg,
+    #3b2c3f40 0px,
+    #3b2c3f40 3px,
+    transparent 3px,
+    transparent 12px
+  );
+  box-shadow: 0 0 0 6px #1f1a2677;
+}
+.poker-table {
+  position: absolute;
+  left: 24%;
+  top: 27%;
+  width: 52%;
+  height: 44%;
+  border-radius: 45%;
+  background: #593943;
+  border: 7px solid #2a202c;
+  box-shadow:
+    0 8px #19151d,
+    0 12px 12px #100d1577,
+    inset 0 0 0 4px #936559;
+  padding: 10px;
+}
+.felt {
+  border: 2px solid #a88d9c55;
+  border-radius: 45%;
+  height: 100%;
+  background: var(--felt);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: inset 0 0 25px #1d132b55;
+}
+.table-caption {
+  font:
+    600 12px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: 3px;
+  color: #d0b6d0a0;
+  text-align: center;
+}
+.table-caption span {
+  display: block;
+  font-size: 4px;
+  letter-spacing: 1.6px;
+  margin-top: 5px;
+}
+.cards {
+  display: flex;
+  gap: 4px;
+  margin-top: 13px;
+}
+.cards i {
+  background: #d7c9b5;
+  color: #513b4b;
+  font: 16px Georgia;
+  font-style: normal;
+  width: 18px;
+  height: 25px;
+  border: 2px solid #f2dfc3;
+  box-shadow: 2px 2px #211c3299;
+}
+.cards i:nth-child(2n) {
+  color: #9b5d65;
+  transform: rotate(6deg);
+}
+.chips {
+  color: #c19c75;
+  font-size: 12px;
+  letter-spacing: 6px;
+  line-height: 10px;
+  margin-top: 7px;
+}
+.seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 2;
+  width: 90px;
+  padding: 0;
+}
+.chair {
+  width: 52px;
+  height: 52px;
+  background: #674150;
+  border: 4px solid #2b202e;
+  box-shadow:
+    inset 3px 3px #8e5f69,
+    3px 4px #19131e;
+  display: grid;
+  place-items: center;
+}
+.chair svg {
+  transform: translateY(-8px);
+  filter: drop-shadow(2px 3px #16121b);
+}
+.seat-name {
+  font-size: 9px;
+  padding: 3px 6px;
+  background: #1b1722e8;
+  border: 1px solid #45394e;
+  color: #d8cfde;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+.seat-name i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: #92bba2;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.empty-chair {
+  height: 34px;
+  width: 39px;
+  border: 2px dashed #796a8155;
+  color: #887491;
+  background: #231d2d44;
+  font-size: 20px;
+}
+.empty .seat-name {
+  font-size: 7px;
+  color: #8c7d96;
+  border-color: transparent;
+  background: transparent;
+}
+.speaking .chair {
+  border-color: var(--accent);
+  box-shadow: 0 0 14px #e1b67a44;
+}
+.bubble {
+  position: absolute;
+  right: 0;
+  top: -17px;
+  background: #ece1cf;
+  color: #4c3a50;
+  padding: 0 7px;
+  border: 2px solid #443149;
+  font-size: 16px;
+  animation: bob 1s infinite alternate;
+}
+.room-footer {
+  height: 35px;
+  background: #1c1823;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  color: #958a9f;
+  font-size: 8px;
+}
