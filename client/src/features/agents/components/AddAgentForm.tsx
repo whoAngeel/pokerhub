@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
-import { ROLES, TABLE_CAPACITY } from '../../casino/model/casino';
+import { ROLES, TABLE_CAPACITY, type Table } from '../../casino/model/casino';
+import type { AddAgentValues } from '../../casino/hooks/useCasino';
 
-export default function AddAgentForm({ tables, initialTableId, seat, onSubmit }) {
-  const [tableId, setTableId] = useState(initialTableId);
+interface AddAgentFormProps {
+  tables: Table[];
+  initialTableId?: string;
+  seat?: number;
+  onSubmit: (tableId: string, values: AddAgentValues) => void;
+}
+
+export default function AddAgentForm({
+  tables,
+  initialTableId,
+  seat,
+  onSubmit,
+}: AddAgentFormProps) {
+  const [tableId, setTableId] = useState(initialTableId ?? tables[0]?.id);
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Desarrollador');
+  const [role, setRole] = useState<string>('Desarrollador');
   const table = tables.find((item) => item.id === tableId);
-  const full = table.agents.length >= TABLE_CAPACITY;
-  function handleSubmit(event) {
+  const full = (table?.agents.length ?? 0) >= TABLE_CAPACITY;
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || full) return;
+    if (!name.trim() || full || !tableId) return;
     onSubmit(tableId, {
       name: name.trim(),
       role,

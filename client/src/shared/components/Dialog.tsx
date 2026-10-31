@@ -1,11 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
-export default function Dialog({ title, onClose, children }) {
-  const ref = useRef(null);
+interface DialogProps {
+  title: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+export default function Dialog({ title, onClose, children }: DialogProps) {
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
-    const previousFocus = document.activeElement;
+    if (!dialog) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
     dialog.showModal();
     return () => {
       dialog.close();

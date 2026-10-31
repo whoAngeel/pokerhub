@@ -1,8 +1,14 @@
-import React from 'react';
 import { Trash2 } from 'lucide-react';
 import AgentAvatar from './AgentAvatar';
+import type { Agent } from '../../casino/model/casino';
 
-export default function AgentDetails({ agent, tableName, onRemove }) {
+interface AgentDetailsProps {
+  agent: Agent;
+  tableName: string;
+  onRemove: () => void;
+}
+
+export default function AgentDetails({ agent, tableName, onRemove }: AgentDetailsProps) {
   return (
     <div className="agent-details">
       <AgentAvatar agent={agent} size={70} />

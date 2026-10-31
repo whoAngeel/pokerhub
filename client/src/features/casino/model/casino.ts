@@ -1,9 +1,34 @@
 export const TABLE_CAPACITY = 9;
-export const ROLES = ['Coordinador', 'Investigadora', 'Desarrollador', 'Creativa', 'Analista'];
+export const ROLES = [
+  'Coordinador',
+  'Investigadora',
+  'Desarrollador',
+  'Creativa',
+  'Analista',
+] as const;
+export type Role = (typeof ROLES)[number];
+
 const colors = ['#b7a1ee', '#f2bb74', '#8ebdb6', '#dc96aa', '#a9c28c'];
 
-export function createInitialTables() {
-  const agents = ['Atlas', 'Nova', 'Pixel', 'Echo', 'Sage'].map((name, index) => ({
+export interface Agent {
+  id: string;
+  name: string;
+  role: Role;
+  color: string;
+  kind: number;
+  seat: number;
+}
+
+export interface Table {
+  id: string;
+  name: string;
+  agents: Agent[];
+  running: boolean;
+}
+
+export function createInitialTables(): Table[] {
+  const names = ['Atlas', 'Nova', 'Pixel', 'Echo', 'Sage'];
+  const agents: Agent[] = names.map((name, index) => ({
     id: `agent-${index + 1}`,
     name,
     role: ROLES[index],
@@ -17,14 +42,40 @@ export function createInitialTables() {
   ];
 }
 
-export function getAvailableSeat(table) {
+export function getAvailableSeat(table: Table): number | undefined {
   return Array.from({ length: TABLE_CAPACITY }, (_, index) => index).find(
     (seat) => !table.agents.some((agent) => agent.seat === seat),
   );
 }
 
+export interface AddAgentPayload {
+  type: 'agent/added';
+  tableId: string;
+  id: string;
+  name?: string;
+  role?: string;
+  seat?: number;
+}
+
+export interface RemoveAgentPayload {
+  type: 'agent/removed';
+  tableId: string;
+  agentId: string;
+}
+
+export interface ToggleSessionPayload {
+  type: 'session/toggled';
+  tableId: string;
+}
+
+export type CasinoAction = AddAgentPayload | RemoveAgentPayload | ToggleSessionPayload;
+
+function isRole(value: string | undefined): value is Role {
+  return value !== undefined && (ROLES as readonly string[]).includes(value);
+}
+
 // Capacity and seat rules are independent of the React interface.
-export function casinoReducer(tables, action) {
+export function casinoReducer(tables: Table[], action: CasinoAction): Table[] {
   return tables.map((table) => {
     if (table.id !== action.tableId) return table;
     switch (action.type) {
@@ -34,10 +85,11 @@ export function casinoReducer(tables, action) {
         if (
           !name ||
           name.length > 18 ||
-          !ROLES.includes(action.role) ||
+          !isRole(action.role) ||
           !action.id ||
           tables.some((item) => item.agents.some((agent) => agent.id === action.id)) ||
           !Number.isInteger(seat) ||
+          seat === undefined ||
           seat < 0 ||
           seat >= TABLE_CAPACITY ||
           table.agents.length >= TABLE_CAPACITY ||

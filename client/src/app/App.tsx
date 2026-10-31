@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { LayoutGrid, Plus, Settings, Spade, Users } from 'lucide-react';
 import CasinoRoom from '../features/casino/components/CasinoRoom';
 import { useCasino } from '../features/casino/hooks/useCasino';
@@ -10,21 +10,34 @@ import { useTheme } from '../features/themes/useTheme';
 import Dialog from '../shared/components/Dialog';
 import './styles.css';
 
+type DialogState =
+  | { type: 'add'; tableId: string; seat?: number }
+  | { type: 'agent'; tableId: string; agentId: string }
+  | { type: 'agents' }
+  | { type: 'settings' };
+
 export default function App() {
   const { tables, addAgent, removeAgent, toggleSession } = useCasino();
   const { themeId, theme, setThemeId } = useTheme();
-  const [dialog, setDialog] = useState(null);
+  const [dialog, setDialog] = useState<DialogState | null>(null);
   const totalAgents = tables.reduce((total, table) => total + table.agents.length, 0);
   const availableTable = tables.find((table) => table.agents.length < TABLE_CAPACITY);
-  const selectedTable = tables.find((table) => table.id === dialog?.tableId);
-  const selectedAgent = selectedTable?.agents.find((agent) => agent.id === dialog?.agentId);
-  function openAddAgent(tableId = availableTable?.id, seat) {
+  const dialogTableId =
+    dialog && (dialog.type === 'add' || dialog.type === 'agent') ? dialog.tableId : undefined;
+  const selectedTable = tables.find((table) => table.id === dialogTableId);
+  const selectedAgent =
+    dialog?.type === 'agent'
+      ? selectedTable?.agents.find((agent) => agent.id === dialog.agentId)
+      : undefined;
+  function openAddAgent(tableId: string | undefined = availableTable?.id, seat?: number) {
     if (tableId) setDialog({ type: 'add', tableId, seat });
   }
   return (
     <div
       className="app"
-      style={{ '--accent': theme.accent, '--felt': theme.felt, '--floor': theme.floor }}
+      style={
+        { '--accent': theme.accent, '--felt': theme.felt, '--floor': theme.floor } as CSSProperties
+      }
     >
       <aside className="rail" aria-label="Navegación principal">
         <a className="brand" href="#casino" aria-label="Agent Royale">
@@ -121,7 +134,7 @@ export default function App() {
               }}
             />
           )}
-          {dialog.type === 'agent' && selectedAgent && (
+          {dialog.type === 'agent' && selectedAgent && selectedTable && (
             <AgentDetails
               agent={selectedAgent}
               tableName={selectedTable.name}
