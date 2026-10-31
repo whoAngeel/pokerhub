@@ -18,20 +18,21 @@ import (
 type EventType string
 
 const (
-	EvHandStart  EventType = "hand_start"
-	EvHoleCards  EventType = "hole_cards"
-	EvBlind      EventType = "blind"
-	EvStreet     EventType = "street"
-	EvTurn       EventType = "turn"
-	EvThinking   EventType = "thinking"
-	EvAction     EventType = "action"
-	EvChat       EventType = "chat"
-	EvReasoning  EventType = "reasoning" // private: only ever meant for spectator/debug consumers
-	EvShowdown   EventType = "showdown"
-	EvPotAwarded EventType = "pot_awarded"
-	EvHandEnd    EventType = "hand_end"
-	EvRebuy      EventType = "rebuy"
-	EvAgentError EventType = "agent_error" // private: fallback/warnings, never a player's own feed
+	EvHandStart    EventType = "hand_start"
+	EvHoleCards    EventType = "hole_cards"
+	EvBlind        EventType = "blind"
+	EvStreet       EventType = "street"
+	EvTurn         EventType = "turn"
+	EvThinking     EventType = "thinking"
+	EvAction       EventType = "action"
+	EvChat         EventType = "chat"
+	EvReasoning    EventType = "reasoning" // private: only ever meant for spectator/debug consumers
+	EvShowdown     EventType = "showdown"
+	EvPotAwarded   EventType = "pot_awarded"
+	EvHandEnd      EventType = "hand_end"
+	EvRebuy        EventType = "rebuy"
+	EvMemoryUpdate EventType = "memory_update" // private: spectator only, PLAN §7
+	EvAgentError   EventType = "agent_error"   // private: fallback/warnings, never a player's own feed
 )
 
 // Event is one table-level occurrence. Only fields relevant to Type are
@@ -85,6 +86,12 @@ type Event struct {
 	// agent_error
 	Cause           string
 	AttemptedAction engine.Action
+
+	// memory_update: Seat is the OBSERVER (the agent whose private notes
+	// changed). MemoryNotes maps rival seat -> that rival's NEW notes
+	// (already clamped/replaced per internal/memory.ParseNotes), never the
+	// observer's full history and never another agent's notes.
+	MemoryNotes map[int][]string
 }
 
 // Sink receives every table.Event as it happens, in order.

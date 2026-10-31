@@ -154,10 +154,10 @@ type MemoryUpdateEntry struct {
 	Notes []string `json:"notes"`
 }
 
-// MemoryUpdatePayload is the "memory_update" event: spectator ONLY. Nothing
-// in this codebase emits it yet (PLAN §9's memory-notes cut), but the wire
-// shape is defined so Project/TableState/schema generation stay exhaustive
-// and the frontend can code against it ahead of time.
+// MemoryUpdatePayload is the "memory_update" event: spectator ONLY. Emitted
+// by internal/table (see memory.go) after every hand that reached showdown,
+// once per LLM seat whose private notes about a rival just changed (PLAN
+// §7). Which agent observed is intentionally not part of this wire shape.
 type MemoryUpdatePayload struct {
 	Updates []MemoryUpdateEntry `json:"updates"`
 }

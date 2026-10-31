@@ -31,6 +31,7 @@ table:
   action_delay_ms: 600
   decision_timeout_ms: 10000
   equity_iters: 2000
+  memory_notes: true       # PLAN §7: notas LLM privadas por rival, entre manos
 
 seats:
   - { type: rulebot, name: "Calculín" }   # asiento 0: futuro asiento humano

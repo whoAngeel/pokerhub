@@ -12,8 +12,10 @@ import (
 // takeTurn runs one full decision for seat: builds its DecisionView, emits
 // turn/thinking, calls Decide under a decision-timeout context, applies the
 // result (falling back to check-if-legal-else-fold and an agent_error event
-// if it's somehow illegal), and emits reasoning/chat.
-func (s *Session) takeTurn(hand *engine.Hand, seat int) {
+// if it's somehow illegal), and emits reasoning/chat. ctx is Run's own ctx;
+// it is passed through to emitEngineEvents (never into Decide: a decision's
+// own timeout is intentionally independent of it, see decisionTimeout).
+func (s *Session) takeTurn(ctx context.Context, hand *engine.Hand, seat int) {
 	pub := hand.Public()
 	legal := hand.LegalActions(seat)
 
@@ -61,7 +63,7 @@ func (s *Session) takeTurn(hand *engine.Hand, seat int) {
 		}
 	}
 
-	s.emitEngineEvents(events)
+	s.emitEngineEvents(ctx, events)
 }
 
 func (s *Session) decisionTimeout() time.Duration {

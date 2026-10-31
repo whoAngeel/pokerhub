@@ -1,18 +1,28 @@
 package table
 
-import "github.com/whoAngeel/pokerhub/internal/engine"
+import (
+	"context"
+
+	"github.com/whoAngeel/pokerhub/internal/engine"
+)
 
 // emitEngineEvents feeds the memory tracker and the action log, and emits a
 // table.Event for every engine.Event, in order. It is the ONLY place table
 // forwards engine-produced data outward, so it's also the natural place to
 // double check nothing beyond what's already public (engine.Event never
 // carries hole cards except the Reveals showdown already made public) leaks.
-func (s *Session) emitEngineEvents(events []engine.Event) {
+//
+// ctx is only used to bound the asynchronous memory-notes update kicked off
+// on EvHandEnd (PLAN §7): it is Run's own ctx, so Session.Run waiting on (or
+// cancelling) those updates on exit works the same way it does for every
+// other per-hand resource.
+func (s *Session) emitEngineEvents(ctx context.Context, events []engine.Event) {
 	for _, ev := range events {
 		s.stats.Record(ev)
 
 		switch ev.Kind {
 		case engine.EvHandStart:
+			s.lastReveals = nil
 			s.emit(Event{
 				Type:       EvHandStart,
 				Button:     ev.Button,
@@ -54,6 +64,7 @@ func (s *Session) emitEngineEvents(events []engine.Event) {
 			s.emit(Event{Type: EvStreet, Street: ev.Street, Board: ev.Board})
 
 		case engine.EvShowdown:
+			s.lastReveals = ev.Reveals
 			s.emit(Event{Type: EvShowdown, Reveals: ev.Reveals})
 
 		case engine.EvPotAwarded:
@@ -64,6 +75,7 @@ func (s *Session) emitEngineEvents(events []engine.Event) {
 				s.stacks[seat] = amt
 			}
 			s.emit(Event{Type: EvHandEnd, Stacks: ev.Stacks})
+			s.maybeUpdateMemory(ctx)
 		}
 	}
 }

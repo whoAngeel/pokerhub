@@ -60,6 +60,9 @@ func (s *Session) opponentsFor(pub engine.PublicState, seat int) []player.Oppone
 			Status:     string(ps.Status),
 			LastAction: s.log.lastActionFor(ps.Seat),
 			Stats:      &stats,
+			// Notes are PRIVATE per observer (PLAN §7): seat's own notes
+			// about ps.Seat only, never anyone else's notes about ps.Seat.
+			Notes: s.noteFor(seat, ps.Seat),
 		})
 	}
 	return out

@@ -30,6 +30,11 @@ type Table struct {
 	ActionDelayMS     int    `yaml:"action_delay_ms"`
 	DecisionTimeoutMS int    `yaml:"decision_timeout_ms"`
 	EquityIters       int    `yaml:"equity_iters"`
+	// MemoryNotes toggles PLAN §7's per-agent private notes about rivals
+	// (table.memory_notes in configs/config.yaml, default true there).
+	// false disables it entirely: Build then hands table.Session no
+	// memory.AgentInfo at all.
+	MemoryNotes bool `yaml:"memory_notes"`
 }
 
 // SeatConfig mirrors one entry of configs/config.yaml's `seats:` list.

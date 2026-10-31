@@ -81,7 +81,7 @@ func buildSession(f sessionFlags, sink table.Sink) (*config.Config, *table.Sessi
 	if *f.mock {
 		buildOpts = append(buildOpts, config.WithMockProviders())
 	}
-	players, err := config.Build(cfg, buildOpts...)
+	players, memAgents, err := config.Build(cfg, buildOpts...)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("build players: %w", err)
 	}
@@ -117,6 +117,7 @@ func buildSession(f sessionFlags, sink table.Sink) (*config.Config, *table.Sessi
 		closeFn()
 		return nil, nil, nil, fmt.Errorf("new session: %w", err)
 	}
+	sess.SetMemoryAgents(memAgents)
 	return cfg, sess, closeFn, nil
 }
 

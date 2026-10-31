@@ -56,6 +56,26 @@ type Session struct {
 	stepCh chan struct{}
 
 	log *actionLog
+
+	// emitMu serializes every Sink.Emit call. Almost everything already
+	// emits from Run's single goroutine, but a memory-notes update (see
+	// memory.go) emits EvMemoryUpdate from its own goroutine, so Sink
+	// implementations (e.g. Printer) that aren't otherwise safe for
+	// concurrent use still see events one at a time.
+	emitMu sync.Mutex
+
+	// memory notes (PLAN §7 / memory.go): memAgents is set once via
+	// SetMemoryAgents before Run; lastReveals is this hand's showdown
+	// reveals (nil unless the hand just reached showdown); notes is
+	// observer seat -> rival seat -> that rival's current notes, guarded
+	// by noteMu because notes-update goroutines write to it concurrently
+	// with buildDecisionView reading it; noteWG tracks every in-flight
+	// update so Run can wait for them (or let ctx cancel them) on exit.
+	memAgents   []memory.AgentInfo
+	lastReveals []engine.Reveal
+	noteMu      sync.Mutex
+	notes       map[int]map[int][]string
+	noteWG      sync.WaitGroup
 }
 
 // NewSession builds a Session over players (index == seat, 2-9 entries),
@@ -152,6 +172,13 @@ func (s *Session) waitIfPaused(ctx context.Context) error {
 // completes if ctx is cancelled (a hand already in progress is never cut
 // off mid-way: per-decision timeouts are independent of ctx, see decide()).
 func (s *Session) Run(ctx context.Context, hands int) error {
+	// Every memory-notes update started by a hand this call to Run played
+	// is bounded by ctx (see memory.go's noteUpdateTimeout), so this never
+	// blocks forever: either ctx gets cancelled and every in-flight update
+	// bails out quickly, or they all finish on their own. Either way, no
+	// goroutine outlives this Run call (important for tests).
+	defer s.noteWG.Wait()
+
 	s.warmup(ctx)
 	for i := 0; hands <= 0 || i < hands; i++ {
 		if err := ctx.Err(); err != nil {
@@ -200,7 +227,7 @@ func (s *Session) playHand(ctx context.Context) {
 	}, seats, s.button, s.rng)
 
 	s.log.reset()
-	s.emitEngineEvents(initEvents)
+	s.emitEngineEvents(ctx, initEvents)
 
 	for {
 		seat, ok := hand.ToAct()
@@ -214,7 +241,7 @@ func (s *Session) playHand(ctx context.Context) {
 			// pause just this once.
 			_ = err
 		}
-		s.takeTurn(hand, seat)
+		s.takeTurn(ctx, hand, seat)
 		s.pace()
 	}
 
@@ -251,5 +278,7 @@ func (s *Session) emit(e Event) {
 	if e.HandID == 0 {
 		e.HandID = s.handID
 	}
+	s.emitMu.Lock()
+	defer s.emitMu.Unlock()
 	s.sink.Emit(e)
 }

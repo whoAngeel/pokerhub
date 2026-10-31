@@ -127,7 +127,7 @@ seats:
 		t.Fatalf("Load: %v", err)
 	}
 
-	players, err := Build(cfg, WithMockProviders())
+	players, _, err := Build(cfg, WithMockProviders())
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

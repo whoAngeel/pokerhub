@@ -63,8 +63,9 @@ func Run(ctx context.Context, addr string, h *Hub, ctrl Controller, pub PublicCo
 //	    rec, err = replay.NewRecorder(recordPath)
 //	    sink = table.MultiSink{hub, rec}
 //	}
-//	players, err := config.Build(cfg)
+//	players, memAgents, err := config.Build(cfg)
 //	sess, err := table.NewSession(tableCfg, players, sink)
+//	sess.SetMemoryAgents(memAgents)
 //	err = server.Serve(ctx, cfg, sess, hub)
 //	if rec != nil { rec.Close() }
 //

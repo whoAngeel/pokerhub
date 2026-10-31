@@ -137,6 +137,9 @@ func (c *Converter) Convert(ev table.Event) (Envelope, error) {
 		c.stacks[ev.Seat] = ev.Amount
 		payload = RebuyPayload{Seat: ev.Seat, Amount: ev.Amount, StackAfter: ev.Amount}
 
+	case table.EvMemoryUpdate:
+		payload = MemoryUpdatePayload{Updates: convertMemoryUpdates(ev.MemoryNotes)}
+
 	case table.EvAgentError:
 		fallback := ev.Meta.Fallback || strings.HasPrefix(ev.Cause, "illegal_action")
 		payload = AgentErrorPayload{
@@ -204,6 +207,20 @@ func convertReveals(reveals []engine.Reveal) []Reveal {
 	for i, r := range reveals {
 		out[i] = Reveal{Seat: r.Seat, Cards: convertCards(r.Cards), Rank: r.Rank}
 	}
+	return out
+}
+
+// convertMemoryUpdates flattens table.Event's internal observer+map shape
+// (Seat = observer, MemoryNotes = rival seat -> notes) into PROTOCOL.md's
+// documented "memory_update" wire shape, one MemoryUpdateEntry per rival
+// seat whose notes just changed. Sorted for a deterministic wire order;
+// which agent observed is intentionally not part of the documented shape.
+func convertMemoryUpdates(notes map[int][]string) []MemoryUpdateEntry {
+	out := make([]MemoryUpdateEntry, 0, len(notes))
+	for rival, n := range notes {
+		out = append(out, MemoryUpdateEntry{Seat: rival, Notes: n})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Seat < out[j].Seat })
 	return out
 }
 

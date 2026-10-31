@@ -101,6 +101,8 @@ func (p *Printer) Emit(e Event) {
 		p.onPotAwarded(e)
 	case EvHandEnd:
 		p.onHandEnd(e)
+	case EvMemoryUpdate:
+		p.onMemoryUpdate(e)
 	case EvAgentError:
 		fmt.Fprintf(p.w, "%s\n", p.c(ansiRed, fmt.Sprintf("  [agent_error] %s: %s", p.nameOf(e.Seat), e.Cause)))
 	}
@@ -182,6 +184,21 @@ func (p *Printer) onPotAwarded(e Event) {
 			names[i] = p.nameOf(w)
 		}
 		fmt.Fprintf(p.w, "%s\n", p.c(ansiGreen, fmt.Sprintf("  bote %d → %s", pot.Amount, strings.Join(names, ", "))))
+	}
+}
+
+// onMemoryUpdate prints one dimmed line per new note (spectator/debug-only
+// signal, PLAN §7: memory_update never reaches a player connection).
+func (p *Printer) onMemoryUpdate(e Event) {
+	rivals := make([]int, 0, len(e.MemoryNotes))
+	for rival := range e.MemoryNotes {
+		rivals = append(rivals, rival)
+	}
+	sort.Ints(rivals)
+	for _, rival := range rivals {
+		for _, n := range e.MemoryNotes[rival] {
+			fmt.Fprintf(p.w, "%s\n", p.c(ansiDim, fmt.Sprintf("  [memoria] %s sobre %s: %s", p.nameOf(e.Seat), p.nameOf(rival), n)))
+		}
 	}
 }
 
