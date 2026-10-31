@@ -1,104 +1,132 @@
 # Pokerhub
 
-Mesa de Texas Hold'em open source (solo fichas ficticias) donde agentes LLM con personalidad **razonan** sus jugadas y hablan en la mesa. El motor de juego es código determinista en Go; los LLM solo proponen acciones que el motor valida. Funciona 100 % local con [Ollama](https://ollama.com), sin claves de API.
+**Orquestador de agentes LLM para evaluar su juicio bajo incertidumbre.** El primer escenario es una mesa de Texas Hold'em con fichas ficticias: varios agentes, cada uno con su personalidad y su modelo, **razonan** cada jugada en voz alta y hablan en la mesa.
 
-- Estado actual y qué falta: [docs/STATUS.md](docs/STATUS.md)
+El póker es solo el banco de pruebas. Lo que se mide es cómo decide cada modelo con información incompleta: si compara bien equity y pot odds, si lee a los rivales, si farolea con sentido y si mantiene un plan coherente. El razonamiento de cada decisión queda visible y grabado, así que se pueden comparar modelos y personalidades en las mismas condiciones (misma semilla, mismas cartas).
+
+Cómo está montado:
+
+- **Motor determinista en Go.** Las reglas no las decide ningún LLM. Los agentes solo *proponen* acciones y el motor las valida.
+- **Cada agente ve solo lo suyo:** sus cartas y el estado público. Su `reasoning` es privado y solo lo ven los espectadores; `say` es lo único que oyen los demás.
+- **Modelos intercambiables por asiento:** Ollama local, OpenRouter o cualquier endpoint compatible con OpenAI. Cada agente puede usar un modelo distinto.
+- **Nunca se bloquea por un modelo:** salida JSON validada, un reintento y, si falla, fallback a check/fold.
+
+Documentación:
+
 - Despliegue local (GPU) y en la nube (DigitalOcean): [docs/DEPLOY.md](docs/DEPLOY.md)
-- Plan y arquitectura: [docs/PLAN.md](docs/PLAN.md)
-- Contrato WebSocket para el frontend: [docs/PROTOCOL.md](docs/PROTOCOL.md)
+- Contrato WebSocket para clientes: [docs/PROTOCOL.md](docs/PROTOCOL.md) (JSON Schema en `docs/schema/`)
+- TUI: [docs/TUI_PLAN.md](docs/TUI_PLAN.md)
 - Convenciones del backend: [CLAUDE.md](CLAUDE.md)
 
-## Estado
+## Agentes
 
-| Pieza | Estado |
-|---|---|
-| Motor (reglas, side pots, evaluación, equity) | ✅ listo, con tests |
-| Proveedores LLM (Ollama / cualquier endpoint OpenAI-compatible, mock) | ✅ listo |
-| Agente LLM (prompt, JSON validado, reintento, fallback) + RuleBot | ✅ listo |
-| Mesa + simulación en terminal (`pokerd sim`) | ✅ listo |
-| Servidor WebSocket (`pokerd serve`) + replay + grabación | ✅ listo |
-| Memoria de rivales (stats + notas) | ✅ stats · ⏳ notas LLM |
+Cuatro agentes LLM y un bot de reglas. Las personalidades viven en `configs/personas/*.yaml` y se pueden editar.
 
-## Estructura
+| Asiento | Agente | Estilo | Modelo local (`config.yaml`) | Modelo por API (`api.yaml`) |
+|---|---|---|---|---|
+| 0 | **Calculín** (RuleBot) | Reglas fijas, sin LLM. Sirve de referencia (y será el asiento humano) | — | — |
+| 1 | **El Toro** | Fanfarrón y agresivo: juega muchas manos, sube y farolea | `gemma4:e4b` | `google/gemma-4-26b-a4b-it` |
+| 2 | **La Abuela** | Muy conservadora: pocas manos, casi nunca farolea | `gemma4:e4b` | `anthropic/claude-haiku-5.5` |
+| 3 | **El Profesor** | Analítico: decide con equity contra pot odds y cita porcentajes | `gemma4:e4b` | `deepseek/deepseek-v4.1-flash` |
+| 4 | **El Payaso** | Impredecible: bromea, ve flops baratos y farolea en botes pequeños | `gemma4:e4b` | `meta-llama/llama-4-scout` |
 
-```text
-pokerhub/
-  go.mod, go.sum          # Modulo y dependencias del codigo central en Go
-  CLAUDE.md              # Convenciones del backend y su arquitectura
-  cmd/pokerd/            # Binario: sim | serve | replay
-  internal/
-    engine/              # Motor determinista (sin I/O ni LLM)
-    player/              # Contrato de turno (DecisionView/Decision) + RuleBot
-    agent/               # Agente LLM: prompt, esquema, validacion, fallback
-    llm/                 # Proveedores de modelos + cola de GPU
-    table/               # Orquestador de la sesion (turnos, rebuy, eventos)
-    memory/              # Estadisticas de rivales
-    config/              # Carga de configs/config.yaml
-  configs/
-    config.yaml          # Servidor, proveedores, mesa y asientos
-    personas/*.yaml      # Personalidades de los agentes (editables)
-  docs/                  # PLAN.md y PROTOCOL.md
-  client/                # Cliente web React + Vite
-    src/app/             # Composicion y layout
-    src/features/        # Casino, agentes y temas
-    src/shared/          # Componentes reutilizables
-    package.json         # Comandos y dependencias exclusivos del cliente
-```
+En local, todos usan el mismo modelo (gemma en tu GPU) y solo cambia la personalidad. En `api.yaml`, cada personaje usa un modelo distinto para poder comparar el juicio de varios modelos en la misma mesa.
 
-El codigo central en Go permanece en la raiz del repositorio y conserva su estructura prevista en CLAUDE.md. El cliente se mantiene aislado en `client/`, sin un repositorio Git anidado ni configuracion de despliegue de Sites.
-
-## Backend en Go
-
-### Requisitos
+## Requisitos
 
 - Go ≥ 1.24 (`go version`)
-- Ollama con un modelo local. Por defecto se usa `gemma4:e4b` (~7 GB de VRAM):
-  ```bash
-  ollama pull gemma4:e4b
-  ```
-  Recomendado: `OLLAMA_KEEP_ALIVE=-1` en el servicio de Ollama para no recargar el modelo entre manos.
-- Sin GPU u Ollama puedes usar `--mock`, con agentes simulados y sin llamadas a modelos.
+- Para modo local: [Ollama](https://ollama.com) y una GPU con ~7 GB de VRAM
+- Para modo API: una clave de [OpenRouter](https://openrouter.ai/keys), sin GPU
+- Sin ninguna de las dos: `--mock` (agentes simulados, sin llamadas a modelos)
 
-### Tests
+## Modo local (Ollama, sin claves)
+
+`configs/config.yaml` es la configuración por defecto y ya apunta a Ollama en `http://localhost:11434/v1`.
+
+1. Descarga el modelo:
+   ```bash
+   ollama pull gemma4:e4b
+   ```
+   Recomendado: `OLLAMA_KEEP_ALIVE=-1` en el servicio de Ollama para no recargar el modelo entre manos.
+
+2. Ver la partida en la terminal (vista espectador con razonamiento):
+   ```bash
+   go run ./cmd/pokerd sim --hands 3
+   ```
+
+3. O con la TUI. Son dos terminales: el servidor juega la partida y la TUI la muestra.
+   ```bash
+   # terminal 1: servidor con Ollama
+   go run ./cmd/pokerd serve --addr 127.0.0.1:8090
+
+   # terminal 2: TUI (por defecto se conecta a ws://127.0.0.1:8090)
+   go run ./cmd/pokerd tui
+   ```
+   La TUI es de solo lectura y se cierra con `q`. Flags: `--url` (acepta `ws://`, `wss://`, `http(s)://`), `--token`, `--ascii` si tu terminal no muestra bien ♠♥♦♣. Se puede ver desde otra máquina por Tailscale: arranca `serve --addr <ip-tailnet>:8090` y en la otra máquina ejecuta `pokerd tui --url http://<ip-tailnet>:8090`.
+
+`configs/config.yaml` lleva `reasoning_effort: none`. Es imprescindible: apaga el "thinking" nativo del modelo, porque el razonamiento va en el campo JSON `reasoning`.
+
+## Modo API (OpenRouter, sin GPU)
+
+`configs/api.yaml` pone cada agente en un modelo distinto de OpenRouter. Coste orientativo: ~0.001 $ por mano.
 
 ```bash
-go vet ./...
-go test -race ./...
+echo 'OPENROUTER_API_KEY=sk-or-...' >> .env      # pokerd lee .env al arrancar
+go run ./cmd/pokerd sim   --config configs/api.yaml --hands 3
+go run ./cmd/pokerd serve --config configs/api.yaml --addr 127.0.0.1:8090   # + pokerd tui
 ```
 
-Los tests no tocan red ni GPU. Las pruebas contra un Ollama real son opcionales:
+- Las claves van **solo** en variables de entorno o en `.env`, que está en `.gitignore`. El YAML solo guarda el nombre de la variable (`api_key_env: OPENROUTER_API_KEY`), nunca la clave.
+- Otro fichero de entorno: `pokerd --env-file ~/pokerhub.env serve ...`.
+- `POKERHUB_TOKEN` en `.env` (o `--token`) protege `/ws` y `/api/config` con `?token=`. La TUI lo lee del mismo `.env`.
 
-```bash
-go test -tags integration ./internal/llm/ ./internal/agent/ -run Integration -v
+## Cambiar modelos
+
+Cada asiento indica su `provider` (definido en `providers:`) y su `model`:
+
+```yaml
+providers:
+  local:
+    type: openai
+    base_url: http://localhost:11434/v1
+    structured: json_schema
+    extra: { reasoning_effort: none }
+  openrouter:
+    type: openai
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    extra: { reasoning: { enabled: false } }
+
+seats:
+  - { type: rulebot, name: "Calculín" }
+  - { type: llm, persona: personas/toro.yaml,   provider: local,      model: "qwen3:8b" }
+  - { type: llm, persona: personas/abuela.yaml, provider: openrouter, model: "anthropic/claude-haiku-5.5" }
 ```
 
-### Ver jugar a los bots en la terminal
+- **Cambiar el modelo de un agente:** edita el `model` de su asiento. En local, antes descarga el modelo con `ollama pull <modelo>`. En OpenRouter, elige uno del [catálogo](https://openrouter.ai/models) que soporte *structured outputs*.
+- **Mezclar local y API:** cada asiento puede usar un provider distinto en la misma mesa.
+- **Qué modelos sirven:** cualquiera servido por un endpoint compatible con OpenAI (Ollama, vLLM, llama.cpp `server`, LM Studio, OpenRouter, Groq…). Hace falta que siga instrucciones y devuelva JSON. Si el servidor no soporta `json_schema`, usa `structured: json_object` o `structured: prompt`. Conviene poder apagar el thinking nativo del modelo (`reasoning_effort: none` en Ollama, `reasoning.enabled: false` en OpenRouter).
+- **Personalidades:** edita o crea `configs/personas/*.yaml` (`name`, `voice`, `strategy`, `temperature`, `reasoning: rich|short`, `chattiness`) y apúntalas desde `seats`.
+- **Provider nuevo en Go** (para APIs no compatibles con OpenAI): implementa `llm.Provider` y regístralo con `llm.Register`.
+- **Partidas comparables:** `--seed N` (o `table.seed`) reparte las mismas cartas, y así se puede comparar el mismo escenario con modelos distintos.
+
+## Comandos
 
 ```bash
-# Sin GPU: agentes mock, sin pausas, 20 manos
-go run ./cmd/pokerd sim --mock --fast --hands 20
-
-# Con Ollama: 4 agentes LLM + 1 RuleBot, razonamiento visible (vista espectador)
-go run ./cmd/pokerd sim --hands 3
-
-# Partida reproducible
-go run ./cmd/pokerd sim --hands 3 --seed 7
-```
-
-Flags: `--config` (por defecto `configs/config.yaml`), `--hands N`, `--seed N`, `--fast` (sin pausas entre acciones), `--mock` (todos los proveedores pasan a mock).
-
-### Servidor para el frontend
-
-```bash
-go run ./cmd/pokerd serve                    # partida real con Ollama, WebSocket en server.addr
-go run ./cmd/pokerd serve --mock             # sin GPU (agentes mock)
+go run ./cmd/pokerd sim --mock --fast --hands 20     # sin GPU: agentes mock, sin pausas
+go run ./cmd/pokerd sim --hands 3 --seed 7           # partida reproducible
 go run ./cmd/pokerd serve --record recordings/mi-partida.jsonl
-go run ./cmd/pokerd replay --speed 2 --loop recordings/sample.jsonl   # sin GPU, partida real grabada
+go run ./cmd/pokerd replay --speed 2 --loop recordings/sample.jsonl   # partida grabada, sin GPU
+go run ./cmd/pokerd tui --url http://127.0.0.1:8090
 ```
 
-Atajos: `make run`, `make run-mock`, `make replay`. Flags de `serve`: `--addr host:port`, `--seed`, `--fast`, `--mock`, `--record`. `sim` también acepta `--record`.
+Flags comunes de `sim` y `serve`: `--config`, `--seed`, `--fast`, `--mock` y `--record`. `serve` y `replay` aceptan también `--addr` y `--token`.
 
-Endpoints (contrato completo en [docs/PROTOCOL.md](docs/PROTOCOL.md); JSON Schema en `docs/schema/`):
+Atajos: `make sim`, `make sim-mock`, `make run`, `make run-mock`, `make replay`, `make test`, `make schema`.
+
+`recordings/sample.jsonl` es una partida real (2 manos, `gemma4:e4b`) para desarrollar clientes sin GPU.
+
+### Endpoints
 
 | Endpoint | Qué |
 |---|---|
@@ -107,64 +135,49 @@ Endpoints (contrato completo en [docs/PROTOCOL.md](docs/PROTOCOL.md); JSON Schem
 | `GET /ws?role=spectator` | vista dios: todas las cartas + `reasoning` |
 | `GET /ws?role=player&seat=N` | solo las cartas del asiento N; nunca `reasoning` |
 
-Prueba rápida desde el navegador o con Node:
+Sin `POKERHUB_TOKEN` no hay autenticación: exponlo solo en una red de confianza (por ejemplo, Tailscale).
 
-```js
-const ws = new WebSocket("ws://127.0.0.1:8080/ws?role=spectator");
-ws.onmessage = (m) => console.log(JSON.parse(m.data));
+### Tests
+
+```bash
+go vet ./...
+go test -race ./...
+go test -tags integration ./internal/llm/ ./internal/agent/ -run Integration -v   # opcional, contra Ollama real
 ```
 
-`recordings/sample.jsonl` es una partida real (2 manos, `gemma4:e4b`) para desarrollar el frontend sin GPU. Por defecto se escucha en `127.0.0.1:8080`. Para abrirlo desde otra máquina por Tailscale, usa `--addr 0.0.0.0:8080` o cambia `server.addr`. No tiene autenticación: exponlo solo en una red de confianza.
+Los tests normales no tocan red ni GPU.
 
-### Configuración
+## Estructura
 
-Todo vive en `configs/config.yaml`:
-
-```yaml
-providers:
-  local:                       # Ollama
-    type: openai
-    base_url: http://localhost:11434/v1
-    extra: { reasoning_effort: none }   # apaga el "thinking" nativo (imprescindible)
-seats:
-  - { type: rulebot, name: "Calculín" }
-  - { type: llm, persona: personas/toro.yaml, provider: local, model: "gemma4:e4b" }
+```text
+cmd/pokerd/            # Binario: sim | serve | replay | tui
+internal/
+  engine/              # Motor determinista (sin I/O ni LLM)
+  player/              # Contrato de turno (DecisionView/Decision) + RuleBot
+  agent/               # Agente LLM: prompt, esquema, validación, fallback
+  llm/                 # Providers de modelos + cola de GPU
+  table/               # Orquestador de la sesión (turnos, rebuy, eventos)
+  memory/              # Estadísticas y notas sobre los rivales
+  protocol/            # Eventos WebSocket (fuente de verdad)
+  server/              # WebSocket + proyección por rol
+  replay/              # Reproducción de grabaciones .jsonl
+  tui/                 # Visor en terminal (Bubble Tea)
+  config/              # Carga de configs/*.yaml
+configs/
+  config.yaml          # Local: Ollama + gemma
+  api.yaml             # Nube: OpenRouter, un modelo por agente
+  personas/*.yaml      # Personalidades de los agentes
+docs/                  # DEPLOY, PROTOCOL, TUI_PLAN, schema/
+client/                # Cliente web React + Vite
 ```
 
-- **Otro modelo u otro servidor:** cualquier endpoint compatible con OpenAI (vLLM, llama.cpp `server`, LM Studio, OpenRouter, Groq…) se añade como provider con `type: openai` y su `base_url`. Cada asiento puede usar un provider y un modelo distintos. Si el servidor no soporta `json_schema`, usa `structured: json_object` o `structured: prompt`.
-- **Dos configuraciones:** `configs/config.yaml` (todo local con gemma en Ollama, sin claves) y `configs/api.yaml` (todo en la nube, sin GPU, un modelo distinto por personaje: El Toro con Gemma 4 26B, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con Llama 4 Scout, todos por OpenRouter).
-  ```bash
-  echo 'OPENROUTER_API_KEY=sk-or-...' >> .env   # pokerd lee .env al arrancar; .env está en .gitignore
-  go run ./cmd/pokerd sim --config configs/api.yaml --hands 3
-  ```
-  Para cambiar el modelo de un personaje, edita el `model` de su asiento (catálogo: https://openrouter.ai/models, con soporte de "structured outputs").
-- **Claves de API:** solo por variable de entorno o en `.env` (nunca se commitea), con `api_key_env: OPENROUTER_API_KEY`. Nunca en el YAML.
-- **Personalidades:** edita o crea `configs/personas/*.yaml` (`name`, `voice`, `strategy`, `temperature`, `reasoning: rich|short`, `chattiness`).
-- **Provider nuevo en Go** (APIs no compatibles con OpenAI): implementa `llm.Provider` y regístralo con `llm.Register`. Ver [docs/PLAN.md §6.1](docs/PLAN.md).
+## Cliente web
 
-## Ejecutar el cliente
-
-Desde PowerShell:
-
-```powershell
+```bash
 cd client
-npm.cmd ci
-npm.cmd run dev
+npm ci
+npm run dev          # http://127.0.0.1:3000/
+npm test && npm run build
 ```
 
-Abrir http://127.0.0.1:3000/.
-
-## Verificar el cliente
-
-```powershell
-cd client
-npm.cmd test
-npm.cmd run build
-npm.cmd run format:check
-```
-
-La documentacion detallada de la interfaz esta en [client/README.md](client/README.md).
-
-## Integracion
-
-El cliente conserva su modo de demostracion: dos mesas, nueve asientos por mesa, sesiones independientes y temas visuales. No se ha conectado al backend Go. Las reglas en `client/src/features/casino/model/` administran la demostracion visual; no sustituyen al motor de poker del servidor. La integracion futura debe respetar los contratos y las reglas de proyeccion documentados por el backend.
+Detalles en [client/README.md](client/README.md). El cliente sigue en modo demostración y todavía no está conectado al backend Go. En el desktop, el dev server del cliente puede ocupar el 8080; por eso los ejemplos usan el 8090 para `pokerd`.

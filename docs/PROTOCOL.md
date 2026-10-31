@@ -15,8 +15,34 @@ cliente para la lógica de juego.
 |---|---|
 | `GET /ws?role=spectator` | Conexión de espectador. Vista dios: todas las hole cards, `reasoning`, `memory_update`, `agent_error`. |
 | `GET /ws?role=player&seat=N` | Conexión del asiento humano `N` (post-MVP). Ve sus propias hole cards + estado público; nunca ve `reasoning` ni las hole cards de otros antes del showdown. |
-| `GET /healthz` | Liveness check HTTP simple, `200 OK`. No es WebSocket. |
+| `GET /healthz` | Liveness check HTTP simple, `200 OK`. No es WebSocket. Siempre abierto, nunca pide token. |
 | `GET /api/config` | HTTP GET, JSON con la configuración pública de la mesa: ciegas, buy-in, lista de asientos con `name`/`persona_id`/`kind` (sin claves ni prompts). Útil para que el frontend pinte la sala antes de que llegue el primer `snapshot`. |
+
+### Autenticación opcional por token
+
+`pokerd serve` y `pokerd replay` aceptan un token de acceso, pensado para
+exponer la mesa fuera de la tailnet (p. ej. por un túnel de Cloudflare, ver
+`docs/DEPLOY.md` §"Túnel de Cloudflare"). Si hay un token configurado,
+`/ws` y `/api/config` lo exigen como query param `token=<valor>` (comparado
+en tiempo constante) y responden `401` sin él o con uno incorrecto;
+`/healthz` nunca lo pide. Sin token configurado, el comportamiento es el de
+siempre (sin autenticación).
+
+La forma recomendada de configurarlo es la variable de entorno
+`POKERHUB_TOKEN`, normalmente en un `.env` junto al binario (ya se carga
+solo, sin pisar variables que ya existan en el entorno real):
+
+```bash
+echo 'POKERHUB_TOKEN=<secreto>' >> .env
+go run ./cmd/pokerd serve     # o: replay ... <file.jsonl>
+```
+
+`--token <valor>` en `serve`/`replay`/`tui` es un override explícito que
+gana sobre `POKERHUB_TOKEN` cuando se pasa; `--env-file <path>` (flag
+global, antes del subcomando: `pokerd --env-file ~/pokerhub.env tui ...`)
+apunta a un `.env` en otra ruta, por si el `.env` del servidor y el de la
+máquina que solo corre `pokerd tui` no pueden vivir en el mismo sitio. El
+token nunca se escribe en logs.
 
 ### Reglas de visibilidad por rol
 

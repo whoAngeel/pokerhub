@@ -36,6 +36,46 @@ Notas:
 
 ---
 
+## Túnel de Cloudflare (ver desde fuera de la tailnet, con `pokerd tui`)
+
+Para que alguien sin Tailscale vea la mesa desde la terminal (`pokerd tui`,
+`docs/TUI_PLAN.md`), un túnel rápido de Cloudflare expone `localhost:8090`
+con una URL `https://…trycloudflare.com` pública, sin tocar firewall ni DNS.
+**Pon siempre un token** (ver `docs/PROTOCOL.md` §1 "Autenticación opcional
+por token"): sin él, cualquiera con la URL puede mirar las cartas de todos y
+pausar la partida.
+
+1. En la máquina que corre el servidor, un `.env` con el token (forma
+   recomendada: variable de entorno, vía `.env`; `--token` en la línea de
+   comandos es solo el *override* explícito):
+   ```bash
+   echo 'POKERHUB_TOKEN=<secreto>' >> .env
+   go run ./cmd/pokerd serve
+   # o, sin GPU: go run ./cmd/pokerd replay --loop recordings/sample.jsonl
+   ```
+2. Levanta el túnel (no necesita cuenta de Cloudflare):
+   ```bash
+   cloudflared tunnel --url http://localhost:8090
+   ```
+   Imprime algo como `https://random-words-1234.trycloudflare.com`.
+3. En la máquina remota (fuera de la tailnet), el mismo `.env` con el mismo
+   token junto al binario `pokerd`:
+   ```bash
+   echo 'POKERHUB_TOKEN=<secreto>' >> .env
+   go run ./cmd/pokerd tui --url wss://random-words-1234.trycloudflare.com
+   ```
+   `pokerd tui` acepta la URL que imprime `cloudflared` tal cual (`https://`
+   se interpreta como `wss://`); `--token` también funciona ahí como
+   override si el `.env` no está a mano, y `--env-file <path>` apunta a un
+   `.env` en otra ruta (flag global, antes del subcomando:
+   `pokerd --env-file ~/pokerhub.env tui --url wss://...`).
+
+El túnel rápido es efímero (la URL cambia cada vez que se reinicia
+`cloudflared`) y no tiene SLA -- suficiente para una demo, no para dejarlo
+encendido días.
+
+---
+
 ## Modo nube (Droplet de DigitalOcean)
 
 ### 1. Crear el Droplet
@@ -100,13 +140,16 @@ Recomendaciones:
 
 ## Seguridad
 
-El servidor **no tiene autenticación**. En una IP pública, cualquiera que conozca la URL puede:
+El servidor **no tiene autenticación por defecto**. Sin un token
+configurado (`POKERHUB_TOKEN`/`--token`, ver `docs/PROTOCOL.md` §1),
+cualquiera que conozca la URL puede:
 - Ver la partida completa como espectador, incluidas todas las cartas y los razonamientos. Con solo bots no importa; con un humano sentado el espectador se bloquea (código 4003).
 - **Pausar o reanudar la partida** con `control` desde el rol espectador.
 
 No puede leer las claves: `/api/config` nunca expone URLs ni claves.
 
 Opciones de menor a mayor esfuerzo:
+0. **Token** (`POKERHUB_TOKEN` en `.env`, ver "Túnel de Cloudflare" arriba): gratis, un cambio de una línea, y es lo mínimo imprescindible en cuanto la URL sale de una red de confianza (tailnet/firewall).
 1. **Firewall de DigitalOcean** limitando 80/8090 a las IPs del equipo.
 2. **Tailscale en el Droplet** (`curl -fsSL https://tailscale.com/install.sh | sh && tailscale up`) y cerrar 80/8090 al público. Así queda igual que el desktop: solo la tailnet entra.
 3. Proxy con TLS y autenticación básica (Caddy) delante de 80 y 8090 → `wss://`. Necesario si el cliente se sirve por `https`, porque el navegador bloquea `ws://` desde una página `https`.

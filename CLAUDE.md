@@ -16,7 +16,7 @@ Mesa de Texas Hold'em (fichas ficticias) con agentes LLM que razonan. Backend en
 - Go ≥ 1.24. `gofmt`, `go vet ./...` y `go test ./...` deben pasar antes de dar algo por terminado.
 - **Tests: solo los esenciales** (hackathon). Uno por funcionalidad nueva: el camino feliz o el invariante crítico. Nada de suites exhaustivas. Los tests de seguridad que ya existen se mantienen: invariante de fichas del motor, anti-fuga de información y visibilidad del projector.
 - Errores con `fmt.Errorf("...: %w", err)`; errores centinela tipados donde el llamador decida (`llm.ErrRateLimit`, etc.).
-- Sin dependencias nuevas sin justificarlas. Aprobadas: echo v4, coder/websocket, openai-go v3, yaml.v3, chehsunliu/poker, invopop/jsonschema.
+- Sin dependencias nuevas sin justificarlas. Aprobadas: echo v4, coder/websocket, openai-go v3, yaml.v3, chehsunliu/poker, invopop/jsonschema, charm.land/bubbletea/v2, charm.land/lipgloss/v2, charm.land/bubbles/v2 (TUI, `internal/tui`/`pokerd tui`, docs/TUI_PLAN.md).
 - Identificadores y comentarios de código en inglés; textos de la mesa, prompts y docs en español.
 - Fichas como `int` (unidades enteras), nunca `float`.
 

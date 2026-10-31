@@ -1,6 +1,6 @@
 # Plan — TUI con Charm (charm.land)
 
-> Estado: **PLAN, sin implementar**. Fecha: 2026-10-31.
+> Estado: **T1 implementado** (visor de solo lectura: `internal/tui`, `pokerd tui`, token opcional en `serve`/`replay`/`tui`). T2-T4 siguen como plan. Fecha: 2026-10-31.
 > Objetivo: ver la mesa en vivo en la terminal (también desde la Mac por Tailscale/SSH) y, más adelante, jugar en el asiento humano. Todo con Bubble Tea, sin navegador.
 
 ## Por qué encaja
