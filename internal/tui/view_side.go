@@ -54,7 +54,10 @@ func (m Model) sidePanelGeometry() (boxW, contentW, height int, show bool) {
 // functions handle the common case (new line arrives, width unchanged).
 func (m *Model) layoutPanels() {
 	_, contentW, boxH, _ := m.sidePanelGeometry()
-	innerH := boxH - 2 // tab bar + separator line, see renderSidePanel
+	// boxH is the box's total height including its 2 border rows; inside
+	// that, the tab bar and its separator rule take 1 row each (see
+	// renderSidePanel), so the viewport gets whatever's left.
+	innerH := boxH - 2 - 2
 	if innerH < 2 {
 		innerH = 2
 	}
