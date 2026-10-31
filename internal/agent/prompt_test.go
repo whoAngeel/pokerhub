@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atzomx/pokerllm/internal/player"
+	"github.com/whoAngeel/pokerhub/internal/player"
 )
 
 func testPersona() Persona {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/atzomx/pokerllm/internal/llm"
-	"github.com/atzomx/pokerllm/internal/player"
+	"github.com/whoAngeel/pokerhub/internal/llm"
+	"github.com/whoAngeel/pokerhub/internal/player"
 )
 
 func agentTestPersona() Persona {

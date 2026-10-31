@@ -183,6 +183,9 @@ func TestIncompleteAllInDoesNotReopen(t *testing.T) {
 	if _, raiseOK := findLegal(h.LegalActions(0), Raise); raiseOK {
 		t.Fatalf("seat0 should not be allowed to raise after an incomplete all-in")
 	}
+	if _, shoveOK := findLegal(h.LegalActions(0), AllIn); shoveOK {
+		t.Fatalf("seat0 should not be allowed to shove (a raise) after an incomplete all-in")
+	}
 	if _, err := h.Apply(0, Action{Type: Check}); err == nil {
 		t.Fatalf("seat0 cannot check: it still owes a call behind the incomplete raise")
 	}

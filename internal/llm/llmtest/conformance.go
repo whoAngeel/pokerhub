@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/atzomx/pokerllm/internal/llm"
+	"github.com/whoAngeel/pokerhub/internal/llm"
 )
 
 // RunConformance runs the shared provider conformance suite against

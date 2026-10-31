@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atzomx/pokerllm/internal/player"
+	"github.com/whoAngeel/pokerhub/internal/player"
 )
 
 func viewWithLegal(legal ...player.LegalAction) player.DecisionView {

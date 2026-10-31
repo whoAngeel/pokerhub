@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/atzomx/pokerllm/internal/player"
+	"github.com/whoAngeel/pokerhub/internal/player"
 )
 
 // rawDecision is the wire shape of DecisionSchema.

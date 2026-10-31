@@ -6,11 +6,11 @@ import "context"
 // driven entirely by DecisionView.Helpers (equity vs pot_odds). No
 // randomness, so it's reproducible and cheap to run as a baseline opponent.
 //
-// Policy (PLAN §2's "player/RuleBot (determinista)"):
-//   - equity >= 0.65: raise to min (or bet min) if legal; otherwise call,
-//     then check, then all_in, then fold, whichever is the strongest legal
-//     option available.
-//   - equity >= pot_odds: call if legal, else check, else all_in, else fold.
+// Policy:
+//   - equity >= 0.65: raise to min (or bet min) if legal; if neither is
+//     legal, fall back to the next tier instead of folding a strong hand.
+//   - equity >= pot_odds: call if legal, else check if legal; if neither,
+//     fall back to the bottom tier.
 //   - otherwise: check if free, else fold.
 type RuleBot struct {
 	name string
@@ -35,14 +35,15 @@ func (b *RuleBot) Decide(_ context.Context, v DecisionView) Decision {
 	equity := v.Helpers.Equity
 	potOdds := v.Helpers.PotOdds
 
-	var action Action
-	switch {
-	case equity >= 0.65:
-		action = pickAggressive(legal)
-	case equity >= potOdds:
-		action = pickPassive(legal)
-	default:
-		action = pickFreeOrFold(legal)
+	action, ok := Action{}, false
+	if equity >= 0.65 {
+		action, ok = raiseOrBet(legal)
+	}
+	if !ok && equity >= potOdds {
+		action, ok = callOrCheck(legal)
+	}
+	if !ok {
+		action = checkOrFold(legal)
 	}
 
 	return Decision{
@@ -55,40 +56,29 @@ func (b *RuleBot) Decide(_ context.Context, v DecisionView) Decision {
 	}
 }
 
-// pickAggressive is the equity>=0.65 tier: raise/bet to the table minimum,
-// falling back to progressively more passive legal options rather than ever
-// folding a strong hand when aggression isn't available.
-func pickAggressive(legal map[string]LegalAction) Action {
+func raiseOrBet(legal map[string]LegalAction) (Action, bool) {
 	if la, ok := legal["raise"]; ok {
-		return Action{Type: "raise", Amount: la.Min}
+		return Action{Type: "raise", Amount: la.Min}, true
 	}
 	if la, ok := legal["bet"]; ok {
-		return Action{Type: "bet", Amount: la.Min}
+		return Action{Type: "bet", Amount: la.Min}, true
 	}
-	return pickPassive(legal)
+	return Action{}, false
 }
 
-// pickPassive is the equity>=pot_odds tier: call, or check if there's
-// nothing to call, or go all_in if that's the only way to continue, or fold.
-func pickPassive(legal map[string]LegalAction) Action {
+func callOrCheck(legal map[string]LegalAction) (Action, bool) {
 	if la, ok := legal["call"]; ok {
-		return Action{Type: "call", Amount: la.Amount}
+		return Action{Type: "call", Amount: la.Amount}, true
 	}
-	return pickFreeOrFold(legal)
+	if _, ok := legal["check"]; ok {
+		return Action{Type: "check", Amount: 0}, true
+	}
+	return Action{}, false
 }
 
-// pickFreeOrFold is the bottom tier: check if it's free, otherwise go all_in
-// only if that's literally the sole way to stay in the hand, otherwise fold.
-func pickFreeOrFold(legal map[string]LegalAction) Action {
+func checkOrFold(legal map[string]LegalAction) Action {
 	if _, ok := legal["check"]; ok {
 		return Action{Type: "check", Amount: 0}
-	}
-	if la, ok := legal["all_in"]; ok {
-		if _, callOK := legal["call"]; !callOK {
-			if _, foldOK := legal["fold"]; !foldOK {
-				return Action{Type: "all_in", Amount: la.Amount}
-			}
-		}
 	}
 	return Action{Type: "fold", Amount: 0}
 }
