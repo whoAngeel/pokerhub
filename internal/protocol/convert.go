@@ -138,7 +138,7 @@ func (c *Converter) Convert(ev table.Event) (Envelope, error) {
 		payload = RebuyPayload{Seat: ev.Seat, Amount: ev.Amount, StackAfter: ev.Amount}
 
 	case table.EvMemoryUpdate:
-		payload = MemoryUpdatePayload{Updates: convertMemoryUpdates(ev.MemoryNotes)}
+		payload = MemoryUpdatePayload{Observer: ev.Seat, Updates: convertMemoryUpdates(ev.MemoryNotes)}
 
 	case table.EvAgentError:
 		fallback := ev.Meta.Fallback || strings.HasPrefix(ev.Cause, "illegal_action")

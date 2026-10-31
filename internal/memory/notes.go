@@ -74,38 +74,41 @@ func systemPrompt(personaName string) string {
 Tu tarea AHORA no es jugar: es actualizar tus notas privadas sobre tus rivales a partir de lo que acabas de observar.
 Reglas:
 - Responde SOLO en español.
-- Te paso el resumen PÚBLICO de la mano (acciones + cartas reveladas en el showdown) y tus notas actuales por rival (asiento -> notas).
+- Te paso el resumen PÚBLICO de la mano (acciones + cartas reveladas en el showdown), la lista de asientos de la mesa (número -> nombre) y tus notas actuales por rival (número de asiento -> notas).
+- En tu respuesta, las claves de "notes" son SIEMPRE el número de asiento (como texto, p. ej. "2"), NUNCA el nombre del jugador. Usa "seats" para traducir nombre -> asiento.
 - Para cada rival sobre el que aprendiste algo nuevo o relevante, da hasta 3 notas cortas (máx. 80 caracteres cada una) que SUSTITUYEN (no se suman a) sus notas actuales.
-- Si no aprendiste nada nuevo sobre un rival, no lo incluyas: sus notas actuales se mantienen igual.
+- Si no aprendiste nada nuevo sobre un rival, no lo incluyas: sus notas actuales se mantienen igual. Nunca te incluyas a ti mismo.
 - Nunca inventes cartas: usa solo lo que aparece en el resumen de la mano.
-Responde SOLO con JSON válido según el esquema: {"notes": {"<asiento>": ["nota corta", ...]}}.`, personaName)
+Responde SOLO con JSON válido según el esquema: {"notes": {"<número de asiento>": ["nota corta", ...]}}.`, personaName)
 }
 
-// userPrompt renders the hand summary and the observer's current notes as
-// compact JSON, matching the agent package's own convention of prefixing a
-// short untrusted-data warning before the payload (there is none needed
-// here: handSummary is built exclusively from public table.Event data, see
-// HandSummary).
-func userPrompt(handSummary string, currentNotes map[int][]string) string {
+// userPrompt renders the hand summary, the seat -> name roster, and the
+// observer's current notes as compact JSON. seats lets the model translate
+// a name it read in handSummary back into the seat number notesSchema
+// requires as a key (without it, small models reliably key notes by name
+// instead -- see notes_test.go/the PLAN §7 live run that caught this).
+func userPrompt(handSummary string, seats map[int]string, currentNotes map[int][]string) string {
 	data, err := json.Marshal(struct {
 		HandSummary  string              `json:"hand_summary"`
+		Seats        map[string]string   `json:"seats"`
 		CurrentNotes map[string][]string `json:"current_notes"`
 	}{
 		HandSummary:  handSummary,
+		Seats:        stringifyNameKeys(seats),
 		CurrentNotes: stringifyKeys(currentNotes),
 	})
 	if err != nil {
-		data = []byte(`{"hand_summary":"","current_notes":{}}`)
+		data = []byte(`{"hand_summary":"","seats":{},"current_notes":{}}`)
 	}
 	return "Mano recién terminada, en JSON:\n" + string(data)
 }
 
 // BuildRequest renders the full llm.Request for a notes update.
-func BuildRequest(model, personaName, handSummary string, currentNotes map[int][]string) llm.Request {
+func BuildRequest(model, personaName, handSummary string, seats map[int]string, currentNotes map[int][]string) llm.Request {
 	return llm.Request{
 		Model:       model,
 		System:      systemPrompt(personaName),
-		User:        userPrompt(handSummary, currentNotes),
+		User:        userPrompt(handSummary, seats, currentNotes),
 		Schema:      notesSchema,
 		SchemaName:  notesSchemaName,
 		MaxTokens:   notesMaxTokens,
@@ -117,16 +120,18 @@ func BuildRequest(model, personaName, handSummary string, currentNotes map[int][
 // parsed per-rival-seat notes to merge in (seats not present in the result
 // keep whatever notes they already had -- PLAN §7: "sustitución, no
 // acumulación" is per rival, not a wholesale replace of the whole map).
+// seats is the table's seat -> display name roster (see BuildRequest/
+// userPrompt).
 //
 // Any error (bad JSON, provider error/timeout) is returned as-is; the
 // caller (table.Session) must treat it exactly like an empty result: keep
 // the old notes and move on. A notes update NEVER blocks or breaks the
 // game.
-func Update(ctx context.Context, info AgentInfo, handSummary string, currentNotes map[int][]string) (map[int][]string, error) {
+func Update(ctx context.Context, info AgentInfo, handSummary string, seats map[int]string, currentNotes map[int][]string) (map[int][]string, error) {
 	if info.Provider == nil {
 		return nil, fmt.Errorf("memory: seat %d has no notes provider", info.Seat)
 	}
-	req := BuildRequest(info.Model, info.PersonaName, handSummary, currentNotes)
+	req := BuildRequest(info.Model, info.PersonaName, handSummary, seats, currentNotes)
 	resp, err := info.Provider.Complete(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("memory: complete: %w", err)
@@ -173,6 +178,14 @@ func stringifyKeys(m map[int][]string) map[string][]string {
 	out := make(map[string][]string, len(m))
 	for seat, notes := range m {
 		out[strconv.Itoa(seat)] = notes
+	}
+	return out
+}
+
+func stringifyNameKeys(m map[int]string) map[string]string {
+	out := make(map[string]string, len(m))
+	for seat, name := range m {
+		out[strconv.Itoa(seat)] = name
 	}
 	return out
 }

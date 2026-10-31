@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+	loadDotEnv(".env")
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)

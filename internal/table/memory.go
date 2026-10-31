@@ -35,6 +35,7 @@ func (s *Session) maybeUpdateMemory(ctx context.Context) {
 	}
 
 	summary := memory.HandSummary(s.log.String(), s.lastReveals, s.names)
+	seats := s.seatNames()
 	handID := s.handID
 
 	for _, info := range s.memAgents {
@@ -51,7 +52,7 @@ func (s *Session) maybeUpdateMemory(ctx context.Context) {
 			updateCtx, cancel := context.WithTimeout(ctx, noteUpdateTimeout)
 			defer cancel()
 
-			updated, err := memory.Update(updateCtx, info, summary, current)
+			updated, err := memory.Update(updateCtx, info, summary, seats, current)
 			if err != nil || len(updated) == 0 {
 				// Keep the old notes, silently: a bad/empty/erroring
 				// response never blocks or breaks the game (PLAN §7),

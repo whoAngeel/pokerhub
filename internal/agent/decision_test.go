@@ -343,7 +343,7 @@ func TestParseAndNormalize_GarbledHandReplaced(t *testing.T) {
 	}{
 		{"code residue", "]), ", "pareja de reyes", true},
 		{"python dict", "{'hole': ['Ah', 'Kd']}", "pareja de reyes", true},
-		{"cards only", "AhKd", "AhKd", false},
+		{"cards only", "9c5c", "9c5c", false},
 		{"normal text", "top pair con kicker as", "top pair con kicker as", false},
 	}
 	for _, tt := range tests {

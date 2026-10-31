@@ -131,7 +131,13 @@ seats:
 ```
 
 - **Otro modelo u otro servidor:** cualquier endpoint compatible con OpenAI (vLLM, llama.cpp `server`, LM Studio, OpenRouter, Groq…) se añade como provider con `type: openai` y su `base_url`. Cada asiento puede usar un provider y un modelo distintos. Si el servidor no soporta `json_schema`, usa `structured: json_object` o `structured: prompt`.
-- **Claves de API:** solo por variable de entorno, con `api_key_env: OPENROUTER_API_KEY`. Nunca en el YAML.
+- **Un modelo distinto por personaje (OpenRouter):** `configs/openrouter.yaml` es un preset listo: El Toro con Llama 3.3 70B, La Abuela con Claude Haiku, El Profesor con DeepSeek y El Payaso con gemma local.
+  ```bash
+  echo 'OPENROUTER_API_KEY=sk-or-...' >> .env   # pokerd lee .env al arrancar; .env está en .gitignore
+  go run ./cmd/pokerd sim --config configs/openrouter.yaml --hands 3
+  ```
+  Para cambiar el modelo de un personaje, edita el `model` de su asiento (catálogo: https://openrouter.ai/models, con soporte de "structured outputs").
+- **Claves de API:** solo por variable de entorno o en `.env` (nunca se commitea), con `api_key_env: OPENROUTER_API_KEY`. Nunca en el YAML.
 - **Personalidades:** edita o crea `configs/personas/*.yaml` (`name`, `voice`, `strategy`, `temperature`, `reasoning: rich|short`, `chattiness`).
 - **Provider nuevo en Go** (APIs no compatibles con OpenAI): implementa `llm.Provider` y regístralo con `llm.Register`. Ver [docs/PLAN.md §6.1](docs/PLAN.md).
 

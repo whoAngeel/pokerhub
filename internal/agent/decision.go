@@ -324,7 +324,7 @@ func detectHallucinatedCards(r *player.Reasoning, v player.DecisionView) string 
 }
 
 // looksGarbled flags free text that is really code/data residue: braces or
-// brackets, or fewer than 3 letters overall.
+// brackets, or no letters at all (cards like "9c5c" are fine).
 func looksGarbled(s string) bool {
 	if strings.ContainsAny(s, "{}[]") {
 		return true
@@ -335,5 +335,5 @@ func looksGarbled(s string) bool {
 			letters++
 		}
 	}
-	return letters < 3
+	return letters == 0
 }

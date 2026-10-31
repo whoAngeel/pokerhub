@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/whoAngeel/pokerhub/internal/llm"
@@ -93,7 +94,7 @@ func (a *LLMAgent) Decide(ctx context.Context, v player.DecisionView) player.Dec
 				continue
 
 			default:
-				return a.fallback(v, start, retries, tokensOut, "fallback:provider_error")
+				return a.fallback(v, start, retries, tokensOut, "fallback:provider_error:"+shortErr(err))
 			}
 		}
 
@@ -191,4 +192,14 @@ func sleepRespectingCtx(ctx context.Context, d time.Duration) bool {
 	case <-ctx.Done():
 		return false
 	}
+}
+
+// shortErr keeps provider errors readable in warnings/agent_error (e.g. an
+// HTTP 401 from a bad API key) without dumping whole response bodies.
+func shortErr(err error) string {
+	msg := strings.Join(strings.Fields(err.Error()), " ")
+	if r := []rune(msg); len(r) > 160 {
+		msg = string(r[:160]) + "…"
+	}
+	return msg
 }

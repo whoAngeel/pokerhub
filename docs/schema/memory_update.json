@@ -2,6 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/whoAngeel/pokerhub/internal/protocol/memory-update-payload",
   "properties": {
+    "observer": {
+      "type": "integer"
+    },
     "updates": {
       "items": {
         "properties": {
@@ -28,6 +31,7 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
+    "observer",
     "updates"
   ]
 }

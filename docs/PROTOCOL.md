@@ -294,11 +294,13 @@ automáticamente (`table.rebuy: auto`).
 
 ### `memory_update`
 
-**Visibilidad:** **solo `spectator`**. Notas nuevas (privadas) que un
-agente escribió sobre sus rivales tras un showdown.
+**Visibilidad:** **solo `spectator`**. Notas nuevas (privadas) que el agente
+`observer` escribió sobre sus rivales tras un showdown. Cada entrada de
+`updates` es un rival (`seat`) con sus notas actuales (máx. 3, ≤80
+caracteres); sustituyen a las anteriores de ese observador sobre ese rival.
 
 ```json
-{ "updates": [ { "seat": 2, "notes": ["Payaso farolea seguido en el river"] } ] }
+{ "observer": 1, "updates": [ { "seat": 4, "notes": ["Payaso farolea seguido en el river"] } ] }
 ```
 
 ### `agent_error`

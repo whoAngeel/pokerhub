@@ -148,7 +148,7 @@ type RebuyPayload struct {
 	StackAfter int `json:"stack_after"`
 }
 
-// MemoryUpdateEntry is one agent's new notes about its rivals.
+// MemoryUpdateEntry is the observer's new notes about one rival (Seat).
 type MemoryUpdateEntry struct {
 	Seat  int      `json:"seat"`
 	Notes []string `json:"notes"`
@@ -157,9 +157,10 @@ type MemoryUpdateEntry struct {
 // MemoryUpdatePayload is the "memory_update" event: spectator ONLY. Emitted
 // by internal/table (see memory.go) after every hand that reached showdown,
 // once per LLM seat whose private notes about a rival just changed (PLAN
-// §7). Which agent observed is intentionally not part of this wire shape.
+// §7). Observer is the agent that wrote the notes.
 type MemoryUpdatePayload struct {
-	Updates []MemoryUpdateEntry `json:"updates"`
+	Observer int                 `json:"observer"`
+	Updates  []MemoryUpdateEntry `json:"updates"`
 }
 
 // AgentErrorPayload is the "agent_error" event: spectator ONLY. Fallback is
